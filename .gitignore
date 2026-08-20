@@ -1,0 +1,23 @@
+# Unreal Engine generated / build artifacts
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# IDE / editor
+.idea/
+.vs/
+.vsconfig
+*.sln
+*.slnx
+
+# Compiled files
+*.opendb
+*.VC.db
+*.sdf
+*.suo
+
+# OS junk
+.DS_Store
+Thumbs.db
