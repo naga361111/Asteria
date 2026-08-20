@@ -10,7 +10,7 @@ public class Asteria : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "AIModule" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] {  });
+		PrivateDependencyModuleNames.AddRange(new string[] { "DeveloperSettings" });
 
 		// GameplayDebugger 모듈 의존성 추가 + WITH_GAMEPLAY_DEBUGGER 정의(Shipping 제외).
 		SetupGameplayDebuggerSupport(Target);
