@@ -10,6 +10,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/Pawn.h"
 #include "TimerManager.h"
 
 UActionRunnerComponent::UActionRunnerComponent()
@@ -55,17 +56,49 @@ void UActionRunnerComponent::RunCurrent()
 		return;
 	}
 
-	UBehaviorTree* BT = Sequence[Index].BT;
-	if (BT == nullptr)
+	const FActionStep& Step = Sequence[Index];
+	if (Step.BT == nullptr)
 	{
 		Advance(); // null 원자 건너뜀.
 		return;
 	}
 
-	AI->RunBehaviorTree(BT);
-	if (UBlackboardComponent* BB = AI->GetBlackboardComponent())
+	// 이동 스텝(Points 있음)이면 목적지 건물을 확정한다. 최초 이동에서 1회 스캔·캐시,
+	// 남은 이동 스텝은 같은 건물 재사용(입구·좌석이 같은 건물이 되도록).
+	const bool bMove = Step.Points.Num() > 0;
+	if (bMove && TargetPlace == nullptr)
 	{
-		BB->SetValueAsVector(MoveGoalKey, Target);
+		const FVector From = (AI->GetPawn() != nullptr) ? AI->GetPawn()->GetActorLocation() : FVector::ZeroVector;
+
+		// 이 행동이 쓸 점 종류 전부(모든 스텝의 합집합) → 그걸 다 가진 건물만 후보.
+		TSet<EPlacePoint> Required;
+		for (const FActionStep& S : Sequence)
+		{
+			Required.Append(S.Points);
+		}
+
+		TargetPlace = FindNearestPlace(GetWorld(), From, Step.Category, Required);
+		if (TargetPlace == nullptr)
+		{
+			Stop(); // 조건 맞는 건물 없음 → 종료.
+			return;
+		}
+	}
+
+	AI->RunBehaviorTree(Step.BT);
+
+	// 이동 스텝이면 이 스텝의 지점 위치를 MoveGoal에 쓴다(스톡 MoveTo가 읽음).
+	if (bMove && TargetPlace != nullptr)
+	{
+		const EPlacePoint Kind = *Step.Points.CreateConstIterator(); // 이 스텝의 목적지 종류.
+		const TArray<FVector> Locs = TargetPlace->GetPoints(Kind);
+		if (Locs.Num() > 0)
+		{
+			if (UBlackboardComponent* BB = AI->GetBlackboardComponent())
+			{
+				BB->SetValueAsVector(MoveGoalKey, Locs[0]);
+			}
+		}
 	}
 }
 
@@ -73,6 +106,7 @@ void UActionRunnerComponent::Stop()
 {
 	Sequence.Empty();
 	Index = 0;
+	TargetPlace = nullptr;
 
 	if (AAIController* AI = Cast<AAIController>(GetOwner()))
 	{
