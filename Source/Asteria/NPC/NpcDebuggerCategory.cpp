@@ -14,6 +14,8 @@
 #include "NpcCharacter.h"
 #include "NeedsComponent.h"
 #include "UtilityBrainComponent.h"
+#include "ActionRunnerComponent.h"
+#include "BehaviorTree/BehaviorTree.h"
 #include "TemperamentComponent.h"
 #include "NpcTemperamentDef.h"
 #include "NpcDebugSettings.h"
@@ -113,6 +115,7 @@ void FNpcDebuggerCategory::FRepData::Serialize(FArchive& Ar)
 	Ar << Duty;
 	Ar << Social;
 	Ar << ChosenAction;
+	Ar << CurrentBehavior;
 	Ar << TemperamentLines;
 }
 
@@ -196,6 +199,20 @@ void FNpcDebuggerCategory::CollectData(APlayerController* OwnerPC, AActor* Debug
 		{
 			DataPack.ChosenAction = Brain->ChosenAction;
 		}
+
+		// 지금 실행 중인 원자 BT + 진행(i/n). 비면 Idle.
+		if (const UActionRunnerComponent* Runner = Ctrl->FindComponentByClass<UActionRunnerComponent>())
+		{
+			if (const UBehaviorTree* BT = Runner->GetCurrentBehavior())
+			{
+				DataPack.CurrentBehavior = FString::Printf(TEXT("%s (%d/%d)"),
+					*BT->GetName(), Runner->GetStepIndex() + 1, Runner->GetStepCount());
+			}
+			else
+			{
+				DataPack.CurrentBehavior = TEXT("(idle)");
+			}
+		}
 	}
 
 	// 가진 기질 목록 + 각 기질이 주는 욕구별 배율(행에 작성된 값).
@@ -269,6 +286,7 @@ void FNpcDebuggerCategory::DrawData(APlayerController* OwnerPC, FGameplayDebugge
 		}
 	}
 	CanvasContext.Printf(TEXT("{green}Chosen : {white}%s"), *DataPack.ChosenAction.ToString());
+	CanvasContext.Printf(TEXT("{green}Action BT : {white}%s"), *DataPack.CurrentBehavior);
 }
 
 #endif // WITH_GAMEPLAY_DEBUGGER

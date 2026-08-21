@@ -42,6 +42,7 @@ private:
 		int32 Duty = 0;
 		int32 Social = 0;
 		FName ChosenAction;
+		FString CurrentBehavior;
 		TArray<FString> TemperamentLines;
 
 		void Serialize(FArchive& Ar);
