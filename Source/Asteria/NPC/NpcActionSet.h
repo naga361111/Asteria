@@ -24,9 +24,9 @@ struct FActionStep
 	UPROPERTY(EditAnywhere, Category="Action Step")
 	EBuildingType Category = EBuildingType::Restaurant;
 
-	/** 목적지 지점 종류(입구/좌석 등). 여러 종류 선택 가능. */
+	/** 이 스텝의 이동 목적지 지점 종류(단일). None이면 이동 안 함(대기 등). */
 	UPROPERTY(EditAnywhere, Category="Action Step")
-	TSet<EPlacePoint> Points;
+	EPlacePoint Point = EPlacePoint::None;
 };
 
 /** 한 행동 세트의 정의 — 순서대로 실행할 스텝 배열. 에디터에서 Data Asset으로 찍어 만든다.

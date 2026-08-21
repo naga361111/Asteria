@@ -65,16 +65,19 @@ void UActionRunnerComponent::RunCurrent()
 
 	// 이동 스텝(Points 있음)이면 목적지 건물을 확정한다. 최초 이동에서 1회 스캔·캐시,
 	// 남은 이동 스텝은 같은 건물 재사용(입구·좌석이 같은 건물이 되도록).
-	const bool bMove = Step.Points.Num() > 0;
+	const bool bMove = Step.Point != EPlacePoint::None;
 	if (bMove && TargetPlace == nullptr)
 	{
 		const FVector From = (AI->GetPawn() != nullptr) ? AI->GetPawn()->GetActorLocation() : FVector::ZeroVector;
 
-		// 이 행동이 쓸 점 종류 전부(모든 스텝의 합집합) → 그걸 다 가진 건물만 후보.
+		// 이 행동이 쓸 점 종류 전부(이동 스텝들의 합집합) → 그걸 다 가진 건물만 후보.
 		TSet<EPlacePoint> Required;
 		for (const FActionStep& S : Sequence)
 		{
-			Required.Append(S.Points);
+			if (S.Point != EPlacePoint::None)
+			{
+				Required.Add(S.Point);
+			}
 		}
 
 		TargetPlace = FindNearestPlace(GetWorld(), From, Step.Category, Required);
@@ -90,13 +93,26 @@ void UActionRunnerComponent::RunCurrent()
 	// 이동 스텝이면 이 스텝의 지점 위치를 MoveGoal에 쓴다(스톡 MoveTo가 읽음).
 	if (bMove && TargetPlace != nullptr)
 	{
-		const EPlacePoint Kind = *Step.Points.CreateConstIterator(); // 이 스텝의 목적지 종류.
-		const TArray<FVector> Locs = TargetPlace->GetPoints(Kind);
+		const TArray<FVector> Locs = TargetPlace->GetPoints(Step.Point);
 		if (Locs.Num() > 0)
 		{
+			// 같은 종류 지점이 여럿이면 NPC에 최근접한 것을 목적지로. (점유는 나중)
+			const FVector From = (AI->GetPawn() != nullptr) ? AI->GetPawn()->GetActorLocation() : FVector::ZeroVector;
+			FVector Nearest = Locs[0];
+			double BestDistSq = FVector::DistSquared(From, Nearest);
+			for (int32 i = 1; i < Locs.Num(); ++i)
+			{
+				const double DistSq = FVector::DistSquared(From, Locs[i]);
+				if (DistSq < BestDistSq)
+				{
+					BestDistSq = DistSq;
+					Nearest = Locs[i];
+				}
+			}
+
 			if (UBlackboardComponent* BB = AI->GetBlackboardComponent())
 			{
-				BB->SetValueAsVector(MoveGoalKey, Locs[0]);
+				BB->SetValueAsVector(MoveGoalKey, Nearest);
 			}
 		}
 	}
