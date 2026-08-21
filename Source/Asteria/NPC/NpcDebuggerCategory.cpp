@@ -5,6 +5,7 @@
 #if WITH_GAMEPLAY_DEBUGGER
 
 #include "GameplayDebuggerTypes.h"
+#include "InputCoreTypes.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
 #include "GameFramework/PlayerController.h"
@@ -15,10 +16,72 @@
 #include "UtilityBrainComponent.h"
 #include "NpcDebugSettings.h"
 
+namespace
+{
+	constexpr int32 GNumNeeds = 4;
+
+	/** SelectedNeed 인덱스 → NeedsComponent의 해당 int32 필드 포인터. */
+	int32* NeedFieldPtr(UNeedsComponent& Needs, int32 Index)
+	{
+		switch (Index)
+		{
+		case 0: return &Needs.Survival;
+		case 1: return &Needs.Safety;
+		case 2: return &Needs.Duty;
+		case 3: return &Needs.Social;
+		default: return nullptr;
+		}
+	}
+}
+
 FNpcDebuggerCategory::FNpcDebuggerCategory()
 {
 	// 프레임워크 데이터팩. 싱글플레이라 실제 복제는 안 타지만 규약대로 등록해둔다.
 	SetDataPackReplication<FRepData>(&DataPack);
+
+	// 디버거 자체 입력. IMC/IA 아님 — HUD 떠 있을 때만 먹고 게임플레이로 안 샌다.
+	BindKeyPress(EKeys::LeftBracket.GetFName(), this, &FNpcDebuggerCategory::OnPrevNeed);
+	BindKeyPress(EKeys::RightBracket.GetFName(), this, &FNpcDebuggerCategory::OnNextNeed);
+	BindKeyPress(EKeys::Hyphen.GetFName(), this, &FNpcDebuggerCategory::OnDecrement);
+	BindKeyPress(EKeys::Equals.GetFName(), this, &FNpcDebuggerCategory::OnIncrement);
+}
+
+void FNpcDebuggerCategory::OnPrevNeed()
+{
+	SelectedNeed = (SelectedNeed + GNumNeeds - 1) % GNumNeeds;
+}
+
+void FNpcDebuggerCategory::OnNextNeed()
+{
+	SelectedNeed = (SelectedNeed + 1) % GNumNeeds;
+}
+
+void FNpcDebuggerCategory::OnIncrement()
+{
+	AdjustNeed(+GetDefault<UNpcDebugSettings>()->NeedStep);
+}
+
+void FNpcDebuggerCategory::OnDecrement()
+{
+	AdjustNeed(-GetDefault<UNpcDebugSettings>()->NeedStep);
+}
+
+void FNpcDebuggerCategory::AdjustNeed(int32 Delta)
+{
+	ANpcCharacter* Npc = CachedNpc.Get();
+	if (Npc == nullptr)
+	{
+		return;
+	}
+	UNeedsComponent* Needs = Npc->FindComponentByClass<UNeedsComponent>();
+	if (Needs == nullptr)
+	{
+		return;
+	}
+	if (int32* Field = NeedFieldPtr(*Needs, SelectedNeed))
+	{
+		*Field = FMath::Clamp(*Field + Delta, 0, 100);
+	}
 }
 
 TSharedRef<FGameplayDebuggerCategory> FNpcDebuggerCategory::MakeInstance()
@@ -36,7 +99,7 @@ void FNpcDebuggerCategory::FRepData::Serialize(FArchive& Ar)
 	Ar << ChosenAction;
 }
 
-const ANpcCharacter* FNpcDebuggerCategory::FindLookedAtNpc(APlayerController* OwnerPC) const
+ANpcCharacter* FNpcDebuggerCategory::FindLookedAtNpc(APlayerController* OwnerPC) const
 {
 	if (OwnerPC == nullptr)
 	{
@@ -85,12 +148,16 @@ void FNpcDebuggerCategory::CollectData(APlayerController* OwnerPC, AActor* Debug
 	DataPack = FRepData();
 
 	// 바라보는 NPC를 매 수집마다 다시 찾는다 → 카메라를 옮기면 재선택 없이 대상이 따라온다.
-	const ANpcCharacter* Npc = FindLookedAtNpc(OwnerPC);
+	ANpcCharacter* Npc = FindLookedAtNpc(OwnerPC);
 	if (Npc == nullptr)
 	{
 		// 트레이스가 빗나가면 프레임워크 선택(아웃라이너/' latch)으로 폴백.
 		Npc = Cast<ANpcCharacter>(DebugActor);
 	}
+
+	// 입력 핸들러가 조작할 대상으로 캐시(null 가능).
+	CachedNpc = Npc;
+
 	if (Npc == nullptr)
 	{
 		return;
@@ -124,11 +191,27 @@ void FNpcDebuggerCategory::DrawData(APlayerController* OwnerPC, FGameplayDebugge
 	}
 
 	// 화면 텍스트는 디버그 폰트 글리프 문제를 피하려 ASCII로 둔다.
-	CanvasContext.Printf(TEXT("{green}Needs"));
-	CanvasContext.Printf(TEXT("  Survival : {white}%d"), DataPack.Survival);
-	CanvasContext.Printf(TEXT("  Safety   : {white}%d"), DataPack.Safety);
-	CanvasContext.Printf(TEXT("  Duty     : {white}%d"), DataPack.Duty);
-	CanvasContext.Printf(TEXT("  Social   : {white}%d"), DataPack.Social);
+	CanvasContext.Printf(TEXT("{green}Needs  {grey}([ ] select   - = adjust)"));
+
+	static const TCHAR* Labels[GNumNeeds] =
+	{
+		TEXT("Survival"), TEXT("Safety  "), TEXT("Duty    "), TEXT("Social  ")
+	};
+	const int32 Values[GNumNeeds] =
+	{
+		DataPack.Survival, DataPack.Safety, DataPack.Duty, DataPack.Social
+	};
+	for (int32 i = 0; i < GNumNeeds; ++i)
+	{
+		if (i == SelectedNeed)
+		{
+			CanvasContext.Printf(TEXT("{yellow}> %s : %d"), Labels[i], Values[i]);
+		}
+		else
+		{
+			CanvasContext.Printf(TEXT("  {white}%s : %d"), Labels[i], Values[i]);
+		}
+	}
 	CanvasContext.Printf(TEXT("{green}Chosen : {white}%s"), *DataPack.ChosenAction.ToString());
 }
 

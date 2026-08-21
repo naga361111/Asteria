@@ -23,4 +23,8 @@ public:
 	 *  트레이스 판정 시작점(화면 정중앙)에는 영향 없음. */
 	UPROPERTY(EditAnywhere, config, Category="Look At")
 	FVector2D DrawOffset = FVector2D(0.0f, -20.0f);
+
+	/** 디버그 키(-/=)로 욕구를 한 번에 얼마나 증감할지. */
+	UPROPERTY(EditAnywhere, config, Category="Needs Edit", meta=(ClampMin="1"))
+	int32 NeedStep = 10;
 };
