@@ -14,11 +14,27 @@
 #include "NpcCharacter.h"
 #include "NeedsComponent.h"
 #include "UtilityBrainComponent.h"
+#include "TemperamentComponent.h"
+#include "NpcTemperamentDef.h"
 #include "NpcDebugSettings.h"
+#include "Engine/DataTable.h"
 
 namespace
 {
 	constexpr int32 GNumNeeds = 4;
+
+	/** 기질 배율 표시용 욕구 짧은 이름. */
+	const TCHAR* NeedName(ENpcNeed Need)
+	{
+		switch (Need)
+		{
+		case ENpcNeed::Survival: return TEXT("Survival");
+		case ENpcNeed::Safety:   return TEXT("Safety");
+		case ENpcNeed::Duty:     return TEXT("Duty");
+		case ENpcNeed::Social:   return TEXT("Social");
+		default:                 return TEXT("?");
+		}
+	}
 
 	/** SelectedNeed 인덱스 → NeedsComponent의 해당 int32 필드 포인터. */
 	int32* NeedFieldPtr(UNeedsComponent& Needs, int32 Index)
@@ -97,6 +113,7 @@ void FNpcDebuggerCategory::FRepData::Serialize(FArchive& Ar)
 	Ar << Duty;
 	Ar << Social;
 	Ar << ChosenAction;
+	Ar << TemperamentLines;
 }
 
 ANpcCharacter* FNpcDebuggerCategory::FindLookedAtNpc(APlayerController* OwnerPC) const
@@ -180,6 +197,26 @@ void FNpcDebuggerCategory::CollectData(APlayerController* OwnerPC, AActor* Debug
 			DataPack.ChosenAction = Brain->ChosenAction;
 		}
 	}
+
+	// 가진 기질 목록 + 각 기질이 주는 욕구별 배율(행에 작성된 값).
+	if (const UTemperamentComponent* Temp = Npc->FindComponentByClass<UTemperamentComponent>())
+	{
+		for (const FName& Name : Temp->Temperaments)
+		{
+			FString Line = Name.ToString();
+			if (Temp->Table != nullptr)
+			{
+				if (const FNpcTemperamentDef* Row = Temp->Table->FindRow<FNpcTemperamentDef>(Name, TEXT("NpcDebugger")))
+				{
+					for (const TPair<ENpcNeed, float>& M : Row->Multipliers)
+					{
+						Line += FString::Printf(TEXT("  %s x%g"), NeedName(M.Key), M.Value);
+					}
+				}
+			}
+			DataPack.TemperamentLines.Add(Line);
+		}
+	}
 }
 
 void FNpcDebuggerCategory::DrawData(APlayerController* OwnerPC, FGameplayDebuggerCanvasContext& CanvasContext)
@@ -188,6 +225,25 @@ void FNpcDebuggerCategory::DrawData(APlayerController* OwnerPC, FGameplayDebugge
 	{
 		CanvasContext.Printf(TEXT("{yellow}No NPC targeted (or no NeedsComponent)."));
 		return;
+	}
+
+	// 오른쪽에 기질 열을 겹쳐 그리기 위해 두 열의 상단 Y를 맞춘다.
+	const float TopY = CanvasContext.CursorY;
+	const float ColX = CanvasContext.DefaultX + 220.0f;
+	const float LineH = CanvasContext.GetLineHeight();
+
+	// 오른쪽 열: 가진 기질 목록(PrintAt은 메인 커서를 안 옮겨 왼쪽 흐름과 독립).
+	CanvasContext.PrintAt(ColX, TopY, FColor::Green, TEXT("Temperaments"));
+	if (DataPack.TemperamentLines.Num() == 0)
+	{
+		CanvasContext.PrintAt(ColX, TopY + LineH, FColor::White, TEXT("(none)"));
+	}
+	else
+	{
+		for (int32 i = 0; i < DataPack.TemperamentLines.Num(); ++i)
+		{
+			CanvasContext.PrintAt(ColX, TopY + LineH * (i + 1), FColor::White, DataPack.TemperamentLines[i]);
+		}
 	}
 
 	// 화면 텍스트는 디버그 폰트 글리프 문제를 피하려 ASCII로 둔다.
