@@ -3,6 +3,7 @@
 #include "NpcCharacter.h"
 #include "NpcAIController.h"
 #include "NeedsComponent.h"
+#include "TemperamentComponent.h"
 
 ANpcCharacter::ANpcCharacter()
 {
@@ -11,4 +12,5 @@ ANpcCharacter::ANpcCharacter()
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
 	Needs = CreateDefaultSubobject<UNeedsComponent>(TEXT("Needs"));
+	Temperament = CreateDefaultSubobject<UTemperamentComponent>(TEXT("Temperament"));
 }

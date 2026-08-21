@@ -20,4 +20,8 @@ protected:
 	/** 4대 욕구 게이지. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="NPC")
 	TObjectPtr<class UNeedsComponent> Needs;
+
+	/** 기질(욕구별 영구 배율). 테이블에서 행 하나 선택. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="NPC")
+	TObjectPtr<class UTemperamentComponent> Temperament;
 };
