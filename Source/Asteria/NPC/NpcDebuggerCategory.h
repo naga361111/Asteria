@@ -33,6 +33,7 @@ private:
 		int32 Safety = 0;
 		int32 Duty = 0;
 		int32 Social = 0;
+		FName ChosenAction;
 
 		void Serialize(FArchive& Ar);
 	};

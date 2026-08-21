@@ -6,10 +6,17 @@
 #include "AIController.h"
 #include "NpcAIController.generated.h"
 
-/** NPC의 뇌 자리. 지금은 빙의만 하고 가만히 있는다.
- *  나중에 효용 AI 평가 / Behavior Tree가 여기 얹힌다. */
+/** NPC의 뇌. 효용 AI 평가기(UUtilityBrainComponent)를 얹어 욕구로 행동을 고른다. */
 UCLASS()
 class ASTERIA_API ANpcAIController : public AAIController
 {
 	GENERATED_BODY()
+
+public:
+	ANpcAIController();
+
+protected:
+	/** 효용 AI 평가기. 욕구를 읽어 행동을 고른다. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="NPC")
+	TObjectPtr<class UUtilityBrainComponent> Brain;
 };

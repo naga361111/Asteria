@@ -9,8 +9,10 @@
 #include "DrawDebugHelpers.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/Controller.h"
 #include "NpcCharacter.h"
 #include "NeedsComponent.h"
+#include "UtilityBrainComponent.h"
 #include "NpcDebugSettings.h"
 
 FNpcDebuggerCategory::FNpcDebuggerCategory()
@@ -31,6 +33,7 @@ void FNpcDebuggerCategory::FRepData::Serialize(FArchive& Ar)
 	Ar << Safety;
 	Ar << Duty;
 	Ar << Social;
+	Ar << ChosenAction;
 }
 
 const ANpcCharacter* FNpcDebuggerCategory::FindLookedAtNpc(APlayerController* OwnerPC) const
@@ -101,6 +104,15 @@ void FNpcDebuggerCategory::CollectData(APlayerController* OwnerPC, AActor* Debug
 		DataPack.Duty = NeedsComp->Duty;
 		DataPack.Social = NeedsComp->Social;
 	}
+
+	// 선택된 행동은 Controller의 브레인이 들고 있다.
+	if (const AController* Ctrl = Npc->GetController())
+	{
+		if (const UUtilityBrainComponent* Brain = Ctrl->FindComponentByClass<UUtilityBrainComponent>())
+		{
+			DataPack.ChosenAction = Brain->ChosenAction;
+		}
+	}
 }
 
 void FNpcDebuggerCategory::DrawData(APlayerController* OwnerPC, FGameplayDebuggerCanvasContext& CanvasContext)
@@ -117,6 +129,7 @@ void FNpcDebuggerCategory::DrawData(APlayerController* OwnerPC, FGameplayDebugge
 	CanvasContext.Printf(TEXT("  Safety   : {white}%d"), DataPack.Safety);
 	CanvasContext.Printf(TEXT("  Duty     : {white}%d"), DataPack.Duty);
 	CanvasContext.Printf(TEXT("  Social   : {white}%d"), DataPack.Social);
+	CanvasContext.Printf(TEXT("{green}Chosen : {white}%s"), *DataPack.ChosenAction.ToString());
 }
 
 #endif // WITH_GAMEPLAY_DEBUGGER
