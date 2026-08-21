@@ -9,6 +9,8 @@
 #include "AIController.h"
 #include "GameFramework/Pawn.h"
 #include "Engine/DataTable.h"
+#include "BehaviorTree/BehaviorTree.h"
+#include "BehaviorTree/BlackboardComponent.h"
 
 namespace
 {
@@ -41,7 +43,7 @@ void UUtilityBrainComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	}
 
 	// 뇌는 Controller에 붙고 욕구는 빙의한 Pawn(Body)에 있다.
-	const AAIController* AI = Cast<AAIController>(GetOwner());
+	AAIController* AI = Cast<AAIController>(GetOwner());
 	const APawn* Body = AI ? AI->GetPawn() : nullptr;
 	const UNeedsComponent* Needs = Body ? Body->FindComponentByClass<UNeedsComponent>() : nullptr;
 	if (Needs == nullptr)
@@ -88,4 +90,23 @@ void UUtilityBrainComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		});
 
 	ChosenAction = Best;
+
+	// 고른 행동이 바뀌면(최초 선택 NAME_None→X 포함) 그 행동의 BT를 실행하고 목적지를 blackboard에 싣는다.
+	// 같은 행동이 유지되면 아무것도 안 함 → 매 틱 트리 리셋 방지.
+	// 여기까지 왔으면 Needs가 유효했다는 뜻이라 AI는 non-null 보장.
+	if (ChosenAction != ActiveAction)
+	{
+		ActiveAction = ChosenAction;
+		if (const FNpcActionDef* Row = ActionTable->FindRow<FNpcActionDef>(ChosenAction, TEXT("UtilityBrain")))
+		{
+			if (Row->BehaviorTree != nullptr)
+			{
+				AI->RunBehaviorTree(Row->BehaviorTree);
+			}
+			if (UBlackboardComponent* BB = AI->GetBlackboardComponent())
+			{
+				BB->SetValueAsVector(MoveGoalKey, Row->TargetLocation);
+			}
+		}
+	}
 }

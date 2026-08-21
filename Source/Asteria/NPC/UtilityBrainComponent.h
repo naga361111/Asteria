@@ -26,5 +26,13 @@ public:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Utility AI")
 	FName ChosenAction;
 
+	/** 고른 행동의 TargetLocation을 실을 blackboard 키. BT와의 배선(튜닝값 아님). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Utility AI")
+	FName MoveGoalKey = TEXT("MoveGoal");
+
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+private:
+	/** 지금 돌고 있는 행동. 이게 바뀔 때만 BT를 RunBehaviorTree로 교체한다(매 틱 리셋 방지). */
+	FName ActiveAction;
 };
