@@ -50,19 +50,28 @@ void UNeedsComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 	const double Now = Time->GetTimeMinutes();
 
-	// 첫 틱: 시작 즉시 안 오르게 다음 임계값만 잡고 끝.
-	if (!bHungerThresholdInit)
+	for (const TPair<ENpcNeed, FNeedRise>& Entry : Rise)
 	{
-		NextHungerThreshold = Now + HungerIntervalMinutes;
-		bHungerThresholdInit = true;
-		return;
-	}
+		const float Interval = Entry.Value.IntervalMinutes;
+		if (Interval <= 0.0f)
+		{
+			continue; // 0이면 while이 무한 루프 — 안 오르는 것으로 취급.
+		}
 
-	// 한 프레임에 여러 간격이 지나도(긴 델타) 빠짐없이 처리. 보통 1회.
-	int32& Hunger = Values.FindOrAdd(ENpcNeed::Hunger);
-	while (Now >= NextHungerThreshold)
-	{
-		Hunger = FMath::Clamp(Hunger + HungerPerInterval, 0, 100);
-		NextHungerThreshold += HungerIntervalMinutes;
+		double* Next = NextRiseMinute.Find(Entry.Key);
+		if (Next == nullptr)
+		{
+			// 이 수치를 처음 본 틱: 시작 즉시 안 오르게 다음 시각만 잡고 끝.
+			NextRiseMinute.Add(Entry.Key, Now + Interval);
+			continue;
+		}
+
+		// 한 프레임에 여러 간격이 지나도(긴 델타) 빠짐없이 처리. 보통 1회.
+		int32& Value = Values.FindOrAdd(Entry.Key);
+		while (Now >= *Next)
+		{
+			Value = FMath::Clamp(Value + Entry.Value.PerInterval, 0, 100);
+			*Next += Interval;
+		}
 	}
 }
