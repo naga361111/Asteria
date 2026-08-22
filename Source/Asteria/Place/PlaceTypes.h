@@ -10,6 +10,7 @@ UENUM(BlueprintType)
 enum class EBuildingType : uint8
 {
 	Restaurant,
+	Home,
 };
 
 /** 건물 내부 지점 종류. 각 지점 컴포넌트가 자신의 Kind로 든다. 갯수는 자유.
@@ -19,5 +20,6 @@ enum class EPlacePoint : uint8
 {
 	Entrance,
 	Seat,
+	Counter,
 	None,
 };
