@@ -32,6 +32,10 @@ public:
 	UPROPERTY(EditAnywhere, Category="Action Runner")
 	FName MoveGoalKey = "MoveGoal";
 
+	/** 실행 중인 Set이 있나. 브레인이 이걸 보고 실행 중엔 재선택을 자제한다.
+	 *  Stop()이 큐를 비우므로 완주·실패 모두 false가 된다. */
+	bool IsRunning() const { return Sequence.IsValidIndex(Index); }
+
 	/** 디버그용 관측: 지금 실행 중인 원자 BT(없으면 null), 진행 인덱스/개수. */
 	UBehaviorTree* GetCurrentBehavior() const { return Sequence.IsValidIndex(Index) ? Sequence[Index].BT : nullptr; }
 	int32 GetStepIndex() const { return Index; }

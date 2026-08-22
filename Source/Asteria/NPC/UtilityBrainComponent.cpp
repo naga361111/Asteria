@@ -28,6 +28,14 @@ void UUtilityBrainComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		return;
 	}
 
+	// Set 실행 중엔 재선택을 자제한다 — 완주 후 최신 수치로 새로 채점.
+	// 긴급 중단이 필요해지면 여기에 예외 조건을 붙이면 된다(러너는 지금도 즉시 교체 가능).
+	// 분 게이트보다 앞에 둬야 LastEvalMinute이 낡은 채 남아 idle 직후 바로 채점된다.
+	if (ActionRunner != nullptr && ActionRunner->IsRunning())
+	{
+		return;
+	}
+
 	// 게임 분이 바뀐 프레임에만 재평가(허기 상승과 같은 클럭). 나머지 틱은 즉시 반환.
 	const UWorld* World = GetWorld();
 	const UAsteriaTimeSubsystem* Time = World ? World->GetSubsystem<UAsteriaTimeSubsystem>() : nullptr;
@@ -90,8 +98,8 @@ void UUtilityBrainComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 			}
 		});
 
-	// 선택이 바뀔 때만 러너에 실행을 넘긴다(매번 넘기면 트리가 계속 재시작).
-	if (Best != ChosenAction && ActionRunner != nullptr)
+	// 여기까지 왔으면 러너는 idle — 고른 걸 항상 넘긴다(같은 행동이면 그대로 반복).
+	if (ActionRunner != nullptr)
 	{
 		if (const FNpcActionDef* Row = ActionTable->FindRow<FNpcActionDef>(Best, TEXT("UtilityBrain")))
 		{
