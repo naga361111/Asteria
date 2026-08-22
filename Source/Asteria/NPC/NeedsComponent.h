@@ -24,7 +24,23 @@ public:
 		meta=(ClampMin="0", ClampMax="100", EditFixedSize, ReadOnlyKeys))
 	TMap<ENpcNeed, int32> Values;
 
+	/** 이 게임 분 간격마다 허기가 오른다(게임 시간 기준, AsteriaTimeSubsystem 참조). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Needs|Hunger", meta=(ClampMin="1"))
+	float HungerIntervalMinutes = 60.0f;
+
+	/** 한 간격마다 허기에 더하는 값(0~100 clamp). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Needs|Hunger", meta=(ClampMin="0"))
+	int32 HungerPerInterval = 5;
+
 	/** enum의 모든 ENpcNeed를 Values에 보장(없는 키만 0으로 추가, 기존 값 보존).
 	 *  생성자 이후 enum에 값이 추가된 옛 에셋을 런타임에 메꾼다. */
 	virtual void OnRegister() override;
+
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
+		FActorComponentTickFunction* ThisTickFunction) override;
+
+private:
+	/** 다음으로 허기를 올릴 누적 게임 분. 첫 틱에 (현재 + Interval)로 세팅. */
+	double NextHungerThreshold = 0.0;
+	bool bHungerThresholdInit = false;
 };
