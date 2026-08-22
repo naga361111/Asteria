@@ -27,8 +27,12 @@ bool UseItem(const UDataTable* EffectTable, FName ItemId, AActor* User)
 		return false;
 	}
 
-	// 허기 회복 = Hunger 감소(0 clamp). 상한은 NeedsComponent 규약대로 100.
-	int32& Hunger = Needs->Values.FindOrAdd(ENpcNeed::Hunger);
-	Hunger = FMath::Clamp(Hunger - Effect->HungerRestore, 0, 100);
+	// 적힌 변화량을 그대로 더한다(음수 = 감소). 범위는 NeedsComponent 규약대로 0~100.
+	// 맵이 비어 있으면 아무 변화 없이 성공 — 행은 찾았으니 사용은 성립.
+	for (const TPair<ENpcNeed, int32>& Delta : Effect->NeedDeltas)
+	{
+		int32& Value = Needs->Values.FindOrAdd(Delta.Key);
+		Value = FMath::Clamp(Value + Delta.Value, 0, 100);
+	}
 	return true;
 }
