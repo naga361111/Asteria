@@ -10,7 +10,8 @@ class UDataTable;
 class UActionRunnerComponent;
 
 /** 효용 AI 평가기. AIController에 붙어, 빙의한 Body의 Needs를 읽어
- *  모든 행동을 점수화하고 최대값 행동을 고른다. 실행은 아직 없다(선택만 관측). */
+ *  모든 행동을 점수화하고 최대값 행동을 고른다. 선택이 바뀌면 러너에 실행을 넘긴다.
+ *  재평가는 게임 분이 바뀔 때만(AsteriaTimeSubsystem 기준) — 허기 상승과 같은 클럭. */
 UCLASS(ClassGroup=(NPC), meta=(BlueprintSpawnableComponent))
 class ASTERIA_API UUtilityBrainComponent : public UActorComponent
 {
@@ -27,7 +28,14 @@ public:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Utility AI")
 	FName ChosenAction;
 
-	/** 고른 행동을 실행시킬 대상. 컨트롤러가 연결한다. (넘기는 로직은 아직 없음) */
+	/** 고른 행동을 실행시킬 대상. 컨트롤러가 연결한다. */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Utility AI")
 	TObjectPtr<UActionRunnerComponent> ActionRunner;
+
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
+		FActorComponentTickFunction* ThisTickFunction) override;
+
+private:
+	/** 마지막으로 스코어링한 게임 분(정수). 이 값이 바뀔 때만 재평가한다. */
+	int32 LastEvalMinute = -1;
 };

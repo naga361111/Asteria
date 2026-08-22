@@ -23,7 +23,7 @@ public:
 	UActionRunnerComponent();
 
 	/** Set의 원자 BT들을 작업 큐로 복사하고 첫 BT부터 실행. Set이 null·비면 즉시 정지. */
-	void RunSet(UNpcActionSet* Set, const FVector& InTarget);
+	void RunSet(UNpcActionSet* Set);
 
 	/** 현재 원자 BT가 끝났다는 신호(FinishStep이 호출). 다음 원자로 전진. */
 	void Advance();
@@ -55,9 +55,6 @@ private:
 
 	/** 지금 실행 중인 원자의 인덱스. */
 	int32 Index = 0;
-
-	/** 이 세트의 목적지. 원자마다 blackboard에 다시 쓴다. */
-	FVector Target = FVector::ZeroVector;
 
 	/** 이 행동이 이동할 건물. 최초 이동 스텝에서 확정하고, 남은 이동 스텝이 재사용한다. */
 	UPROPERTY(Transient)

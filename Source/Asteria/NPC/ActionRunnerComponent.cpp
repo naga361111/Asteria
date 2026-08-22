@@ -19,10 +19,9 @@ UActionRunnerComponent::UActionRunnerComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-void UActionRunnerComponent::RunSet(UNpcActionSet* Set, const FVector& InTarget)
+void UActionRunnerComponent::RunSet(UNpcActionSet* Set)
 {
 	Sequence = (Set != nullptr) ? Set->Steps : TArray<FActionStep>();
-	Target = InTarget;
 	Index = 0;
 	TargetPlace = nullptr; // 새 행동 → 건물 다시 확정.
 

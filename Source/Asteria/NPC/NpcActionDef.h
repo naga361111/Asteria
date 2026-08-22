@@ -34,8 +34,4 @@ struct FNpcActionDef : public FTableRowBase
 	/** 이 행동을 실행하는 Set(원자 BT 배열). 선택되면 runner가 이 Set을 순서대로 실행. 비면 실행 없음(선택만). */
 	UPROPERTY(EditAnywhere, Category="Action")
 	TObjectPtr<UNpcActionSet> ActionSet;
-
-	/** 이동 BT가 읽을 목적지(월드 좌표). ponytail: 임시 하드 좌표. step 2에서 Blackboard/런타임 해석으로 이사. */
-	UPROPERTY(EditAnywhere, Category="Action")
-	FVector TargetLocation = FVector::ZeroVector;
 };
