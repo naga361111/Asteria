@@ -23,31 +23,13 @@
 
 namespace
 {
-	constexpr int32 GNumNeeds = 4;
-
-	/** 기질 배율 표시용 욕구 짧은 이름. */
+	/** 기질 배율 표시용 고려값 짧은 이름. */
 	const TCHAR* NeedName(ENpcNeed Need)
 	{
 		switch (Need)
 		{
-		case ENpcNeed::Survival: return TEXT("Survival");
-		case ENpcNeed::Safety:   return TEXT("Safety");
-		case ENpcNeed::Duty:     return TEXT("Duty");
-		case ENpcNeed::Social:   return TEXT("Social");
-		default:                 return TEXT("?");
-		}
-	}
-
-	/** SelectedNeed 인덱스 → NeedsComponent의 해당 int32 필드 포인터. */
-	int32* NeedFieldPtr(UNeedsComponent& Needs, int32 Index)
-	{
-		switch (Index)
-		{
-		case 0: return &Needs.Survival;
-		case 1: return &Needs.Safety;
-		case 2: return &Needs.Duty;
-		case 3: return &Needs.Social;
-		default: return nullptr;
+		case ENpcNeed::Hunger: return TEXT("Hunger");
+		default:               return TEXT("?");
 		}
 	}
 }
@@ -58,47 +40,31 @@ FNpcDebuggerCategory::FNpcDebuggerCategory()
 	SetDataPackReplication<FRepData>(&DataPack);
 
 	// 디버거 자체 입력. IMC/IA 아님 — HUD 떠 있을 때만 먹고 게임플레이로 안 샌다.
-	BindKeyPress(EKeys::LeftBracket.GetFName(), this, &FNpcDebuggerCategory::OnPrevNeed);
-	BindKeyPress(EKeys::RightBracket.GetFName(), this, &FNpcDebuggerCategory::OnNextNeed);
 	BindKeyPress(EKeys::Hyphen.GetFName(), this, &FNpcDebuggerCategory::OnDecrement);
 	BindKeyPress(EKeys::Equals.GetFName(), this, &FNpcDebuggerCategory::OnIncrement);
 }
 
-void FNpcDebuggerCategory::OnPrevNeed()
-{
-	SelectedNeed = (SelectedNeed + GNumNeeds - 1) % GNumNeeds;
-}
-
-void FNpcDebuggerCategory::OnNextNeed()
-{
-	SelectedNeed = (SelectedNeed + 1) % GNumNeeds;
-}
-
 void FNpcDebuggerCategory::OnIncrement()
 {
-	AdjustNeed(+GetDefault<UNpcDebugSettings>()->NeedStep);
+	AdjustHunger(+GetDefault<UNpcDebugSettings>()->NeedStep);
 }
 
 void FNpcDebuggerCategory::OnDecrement()
 {
-	AdjustNeed(-GetDefault<UNpcDebugSettings>()->NeedStep);
+	AdjustHunger(-GetDefault<UNpcDebugSettings>()->NeedStep);
 }
 
-void FNpcDebuggerCategory::AdjustNeed(int32 Delta)
+void FNpcDebuggerCategory::AdjustHunger(int32 Delta)
 {
 	ANpcCharacter* Npc = CachedNpc.Get();
 	if (Npc == nullptr)
 	{
 		return;
 	}
-	UNeedsComponent* Needs = Npc->FindComponentByClass<UNeedsComponent>();
-	if (Needs == nullptr)
+	if (UNeedsComponent* Needs = Npc->FindComponentByClass<UNeedsComponent>())
 	{
-		return;
-	}
-	if (int32* Field = NeedFieldPtr(*Needs, SelectedNeed))
-	{
-		*Field = FMath::Clamp(*Field + Delta, 0, 100);
+		int32& V = Needs->Values.FindOrAdd(ENpcNeed::Hunger);
+		V = FMath::Clamp(V + Delta, 0, 100);
 	}
 }
 
@@ -110,10 +76,7 @@ TSharedRef<FGameplayDebuggerCategory> FNpcDebuggerCategory::MakeInstance()
 void FNpcDebuggerCategory::FRepData::Serialize(FArchive& Ar)
 {
 	Ar << bHasNeeds;
-	Ar << Survival;
-	Ar << Safety;
-	Ar << Duty;
-	Ar << Social;
+	Ar << Hunger;
 	Ar << ChosenAction;
 	Ar << CurrentBehavior;
 	Ar << TemperamentLines;
@@ -186,10 +149,7 @@ void FNpcDebuggerCategory::CollectData(APlayerController* OwnerPC, AActor* Debug
 	if (const UNeedsComponent* NeedsComp = Npc->FindComponentByClass<UNeedsComponent>())
 	{
 		DataPack.bHasNeeds = true;
-		DataPack.Survival = NeedsComp->Survival;
-		DataPack.Safety = NeedsComp->Safety;
-		DataPack.Duty = NeedsComp->Duty;
-		DataPack.Social = NeedsComp->Social;
+		DataPack.Hunger = NeedsComp->Values.FindRef(ENpcNeed::Hunger);
 	}
 
 	// 선택된 행동은 Controller의 브레인이 들고 있다.
@@ -264,27 +224,8 @@ void FNpcDebuggerCategory::DrawData(APlayerController* OwnerPC, FGameplayDebugge
 	}
 
 	// 화면 텍스트는 디버그 폰트 글리프 문제를 피하려 ASCII로 둔다.
-	CanvasContext.Printf(TEXT("{green}Needs  {grey}([ ] select   - = adjust)"));
-
-	static const TCHAR* Labels[GNumNeeds] =
-	{
-		TEXT("Survival"), TEXT("Safety  "), TEXT("Duty    "), TEXT("Social  ")
-	};
-	const int32 Values[GNumNeeds] =
-	{
-		DataPack.Survival, DataPack.Safety, DataPack.Duty, DataPack.Social
-	};
-	for (int32 i = 0; i < GNumNeeds; ++i)
-	{
-		if (i == SelectedNeed)
-		{
-			CanvasContext.Printf(TEXT("{yellow}> %s : %d"), Labels[i], Values[i]);
-		}
-		else
-		{
-			CanvasContext.Printf(TEXT("  {white}%s : %d"), Labels[i], Values[i]);
-		}
-	}
+	CanvasContext.Printf(TEXT("{green}Needs  {grey}(- = adjust)"));
+	CanvasContext.Printf(TEXT("  {white}Hunger : %d"), DataPack.Hunger);
 	CanvasContext.Printf(TEXT("{green}Chosen : {white}%s"), *DataPack.ChosenAction.ToString());
 	CanvasContext.Printf(TEXT("{green}Action BT : {white}%s"), *DataPack.CurrentBehavior);
 }

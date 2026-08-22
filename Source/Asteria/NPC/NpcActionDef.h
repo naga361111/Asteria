@@ -6,14 +6,12 @@
 #include "Engine/DataTable.h"
 #include "NpcActionDef.generated.h"
 
-/** 효용 AI가 참조하는 욕구 종류. NeedsComponent의 4대 게이지와 1:1. */
+/** 효용 AI가 참조하는 고려값 종류. DT(NeedWeights·Multipliers) 드롭다운을 채운다.
+ *  지금은 허기 하나. NeedsComponent 필드와는 별개 — 잇는 다리(스코어링)는 아직 없다. */
 UENUM(BlueprintType)
 enum class ENpcNeed : uint8
 {
-	Survival,
-	Safety,
-	Duty,
-	Social,
+	Hunger,
 };
 
 class UNpcActionSet;

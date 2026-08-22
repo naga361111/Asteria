@@ -4,10 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "NpcActionDef.h" // ENpcNeed
 #include "NeedsComponent.generated.h"
 
-/** NPC의 4대 욕구 게이지(0~100). 지금은 값만 보유한다.
- *  시간에 따른 증감(틱)·getter는 효용 루프가 이 값을 읽기 시작할 때 붙인다. */
+/** NPC Body의 생리 수치(raw). ENpcNeed를 키로 값만 저장한다 — 종류 정의는 ENpcNeed가 단일 소스라
+ *  enum에 값 추가 시 드롭다운·저장 키가 동시에 생긴다(두 곳 수정 없음).
+ *  시간 증가·소비 감소 같은 계산 로직은 아직 없다. 저장 안 하는 계산 고려값은 여기 없이 enum에만 둔다. */
 UCLASS(ClassGroup=(NPC), meta=(BlueprintSpawnableComponent))
 class ASTERIA_API UNeedsComponent : public UActorComponent
 {
@@ -16,19 +18,13 @@ class ASTERIA_API UNeedsComponent : public UActorComponent
 public:
 	UNeedsComponent();
 
-	/** 생존: 배고픔·갈증·수면. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Needs", meta=(ClampMin="0", ClampMax="100"))
-	int32 Survival = 0;
+	/** 고려값 종류별 raw 수치(0~100). 키 종류는 ENpcNeed에서 옴. 높을수록 결핍. 아직 아무도 안 읽음.
+	 *  키는 생성자가 enum 순회로 전부 채운다 — 에디터에서는 값만 고치고 키는 추가/삭제 불가. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Needs",
+		meta=(ClampMin="0", ClampMax="100", EditFixedSize, ReadOnlyKeys))
+	TMap<ENpcNeed, int32> Values;
 
-	/** 안전: 위협(몬스터·빈곤·체력 저하)에서 벗어나려는 욕구. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Needs", meta=(ClampMin="0", ClampMax="100"))
-	int32 Safety = 0;
-
-	/** 소명: 직업적 성취·재화 축적. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Needs", meta=(ClampMin="0", ClampMax="100"))
-	int32 Duty = 0;
-
-	/** 사회: 소속감·유흥·교류. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Needs", meta=(ClampMin="0", ClampMax="100"))
-	int32 Social = 0;
+	/** enum의 모든 ENpcNeed를 Values에 보장(없는 키만 0으로 추가, 기존 값 보존).
+	 *  생성자 이후 enum에 값이 추가된 옛 에셋을 런타임에 메꾼다. */
+	virtual void OnRegister() override;
 };

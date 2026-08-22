@@ -30,6 +30,4 @@ public:
 	/** 고른 행동을 실행시킬 대상. 컨트롤러가 연결한다. (넘기는 로직은 아직 없음) */
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category="Utility AI")
 	TObjectPtr<UActionRunnerComponent> ActionRunner;
-
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 };
