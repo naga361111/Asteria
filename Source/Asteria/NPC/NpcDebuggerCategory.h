@@ -26,16 +26,19 @@ private:
 	ANpcCharacter* FindLookedAtNpc(APlayerController* OwnerPC) const;
 
 	// 디버그 입력 핸들러 — 디버거 HUD가 떠 있을 때만 활성(Enhanced Input 아님).
-	void OnIncrement();  // = : 허기 +Step
-	void OnDecrement();  // - : 허기 -Step
-	/** 캐시된 NPC의 Hunger를 Delta만큼(0~100 clamp) 조정. */
-	void AdjustHunger(int32 Delta);
+	void OnIncrement();  // = : 선택 수치 +Step
+	void OnDecrement();  // - : 선택 수치 -Step
+	void OnPrevNeed();   // [ : 선택 수치 이전
+	void OnNextNeed();   // ] : 선택 수치 다음
+	/** 캐시된 NPC의 선택 수치를 Delta만큼(0~100 clamp) 조정. */
+	void AdjustSelectedNeed(int32 Delta);
 
 	/** CollectData가 채우고 DrawData가 읽는다. 새 컴포넌트가 붙으면 여기에 필드를 늘린다. */
 	struct FRepData
 	{
 		bool bHasNeeds = false;
-		int32 Hunger = 0;
+		/** ENpcNeed 순서대로의 수치. 인덱스 = StaticEnum 순회 순서. */
+		TArray<int32> NeedValues;
 		FName ChosenAction;
 		FString CurrentBehavior;
 		TArray<FString> TemperamentLines;
@@ -46,6 +49,9 @@ private:
 
 	/** 입력 핸들러가 조작할 대상. CollectData가 매 틱 캐시(null 가능). */
 	TWeakObjectPtr<ANpcCharacter> CachedNpc;
+
+	/** +/- 가 조작할 수치(ENpcNeed 순회 인덱스). [ ] 로 이동. */
+	int32 SelectedNeed = 0;
 };
 
 #endif // WITH_GAMEPLAY_DEBUGGER

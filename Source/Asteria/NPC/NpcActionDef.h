@@ -12,6 +12,7 @@ UENUM(BlueprintType)
 enum class ENpcNeed : uint8
 {
 	Hunger,
+	Fatigue,
 };
 
 class UNpcActionSet;

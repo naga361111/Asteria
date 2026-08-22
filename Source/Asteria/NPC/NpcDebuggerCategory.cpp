@@ -6,6 +6,7 @@
 
 #include "GameplayDebuggerTypes.h"
 #include "InputCoreTypes.h"
+#include "UObject/Class.h" // UEnum / StaticEnum
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
 #include "GameFramework/PlayerController.h"
@@ -23,14 +24,10 @@
 
 namespace
 {
-	/** 기질 배율 표시용 고려값 짧은 이름. */
-	const TCHAR* NeedName(ENpcNeed Need)
+	/** 고려값 이름 — enum 리플렉션에서 뽑아 값 추가 시 자동 반영. */
+	FString NeedName(ENpcNeed Need)
 	{
-		switch (Need)
-		{
-		case ENpcNeed::Hunger: return TEXT("Hunger");
-		default:               return TEXT("?");
-		}
+		return StaticEnum<ENpcNeed>()->GetNameStringByValue(static_cast<int64>(Need));
 	}
 }
 
@@ -42,19 +39,33 @@ FNpcDebuggerCategory::FNpcDebuggerCategory()
 	// 디버거 자체 입력. IMC/IA 아님 — HUD 떠 있을 때만 먹고 게임플레이로 안 샌다.
 	BindKeyPress(EKeys::Hyphen.GetFName(), this, &FNpcDebuggerCategory::OnDecrement);
 	BindKeyPress(EKeys::Equals.GetFName(), this, &FNpcDebuggerCategory::OnIncrement);
+	BindKeyPress(EKeys::LeftBracket.GetFName(), this, &FNpcDebuggerCategory::OnPrevNeed);
+	BindKeyPress(EKeys::RightBracket.GetFName(), this, &FNpcDebuggerCategory::OnNextNeed);
 }
 
 void FNpcDebuggerCategory::OnIncrement()
 {
-	AdjustHunger(+GetDefault<UNpcDebugSettings>()->NeedStep);
+	AdjustSelectedNeed(+GetDefault<UNpcDebugSettings>()->NeedStep);
 }
 
 void FNpcDebuggerCategory::OnDecrement()
 {
-	AdjustHunger(-GetDefault<UNpcDebugSettings>()->NeedStep);
+	AdjustSelectedNeed(-GetDefault<UNpcDebugSettings>()->NeedStep);
 }
 
-void FNpcDebuggerCategory::AdjustHunger(int32 Delta)
+void FNpcDebuggerCategory::OnPrevNeed()
+{
+	const int32 Num = StaticEnum<ENpcNeed>()->NumEnums() - 1; // 마지막 자동 _MAX 제외
+	SelectedNeed = (SelectedNeed - 1 + Num) % Num;
+}
+
+void FNpcDebuggerCategory::OnNextNeed()
+{
+	const int32 Num = StaticEnum<ENpcNeed>()->NumEnums() - 1;
+	SelectedNeed = (SelectedNeed + 1) % Num;
+}
+
+void FNpcDebuggerCategory::AdjustSelectedNeed(int32 Delta)
 {
 	ANpcCharacter* Npc = CachedNpc.Get();
 	if (Npc == nullptr)
@@ -63,7 +74,9 @@ void FNpcDebuggerCategory::AdjustHunger(int32 Delta)
 	}
 	if (UNeedsComponent* Needs = Npc->FindComponentByClass<UNeedsComponent>())
 	{
-		int32& V = Needs->Values.FindOrAdd(ENpcNeed::Hunger);
+		const UEnum* E = StaticEnum<ENpcNeed>();
+		const ENpcNeed Need = static_cast<ENpcNeed>(E->GetValueByIndex(FMath::Clamp(SelectedNeed, 0, E->NumEnums() - 2)));
+		int32& V = Needs->Values.FindOrAdd(Need);
 		V = FMath::Clamp(V + Delta, 0, 100);
 	}
 }
@@ -76,7 +89,7 @@ TSharedRef<FGameplayDebuggerCategory> FNpcDebuggerCategory::MakeInstance()
 void FNpcDebuggerCategory::FRepData::Serialize(FArchive& Ar)
 {
 	Ar << bHasNeeds;
-	Ar << Hunger;
+	Ar << NeedValues;
 	Ar << ChosenAction;
 	Ar << CurrentBehavior;
 	Ar << TemperamentLines;
@@ -149,7 +162,11 @@ void FNpcDebuggerCategory::CollectData(APlayerController* OwnerPC, AActor* Debug
 	if (const UNeedsComponent* NeedsComp = Npc->FindComponentByClass<UNeedsComponent>())
 	{
 		DataPack.bHasNeeds = true;
-		DataPack.Hunger = NeedsComp->Values.FindRef(ENpcNeed::Hunger);
+		const UEnum* E = StaticEnum<ENpcNeed>();
+		for (int32 i = 0; i < E->NumEnums() - 1; ++i) // _MAX 제외, enum 순서대로
+		{
+			DataPack.NeedValues.Add(NeedsComp->Values.FindRef(static_cast<ENpcNeed>(E->GetValueByIndex(i))));
+		}
 	}
 
 	// 선택된 행동은 Controller의 브레인이 들고 있다.
@@ -187,7 +204,7 @@ void FNpcDebuggerCategory::CollectData(APlayerController* OwnerPC, AActor* Debug
 				{
 					for (const TPair<ENpcNeed, float>& M : Row->Multipliers)
 					{
-						Line += FString::Printf(TEXT("  %s x%g"), NeedName(M.Key), M.Value);
+						Line += FString::Printf(TEXT("  %s x%g"), *NeedName(M.Key), M.Value);
 					}
 				}
 			}
@@ -224,8 +241,16 @@ void FNpcDebuggerCategory::DrawData(APlayerController* OwnerPC, FGameplayDebugge
 	}
 
 	// 화면 텍스트는 디버그 폰트 글리프 문제를 피하려 ASCII로 둔다.
-	CanvasContext.Printf(TEXT("{green}Needs  {grey}(- = adjust)"));
-	CanvasContext.Printf(TEXT("  {white}Hunger : %d"), DataPack.Hunger);
+	CanvasContext.Printf(TEXT("{green}Needs  {grey}([ ] select, - = adjust)"));
+	const UEnum* NeedEnum = StaticEnum<ENpcNeed>();
+	for (int32 i = 0; i < DataPack.NeedValues.Num(); ++i)
+	{
+		const bool bSel = (i == SelectedNeed);
+		const ENpcNeed Need = static_cast<ENpcNeed>(NeedEnum->GetValueByIndex(i));
+		CanvasContext.Printf(TEXT("%s%s : %d"),
+			bSel ? TEXT("{yellow}  > ") : TEXT("{white}    "),
+			*NeedName(Need), DataPack.NeedValues[i]);
+	}
 	CanvasContext.Printf(TEXT("{green}Chosen : {white}%s"), *DataPack.ChosenAction.ToString());
 	CanvasContext.Printf(TEXT("{green}Action BT : {white}%s"), *DataPack.CurrentBehavior);
 }
