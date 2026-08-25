@@ -1,0 +1,58 @@
+# ==========================================
+# Unreal Engine 5 .gitignore
+# ==========================================
+
+# Visual Studio / Rider / IDE temp files & solutions
+.vs/
+.idea/
+.vscode/
+*.sln
+*.slnx
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.VC.db
+*.opendb
+*.opensdf
+*.sdf
+*.suo
+*.user
+*.userosv
+*.sln.docstates
+*.patch
+
+# Xcode / CLion / JetBrains
+*.xcodeproj
+*.xcworkspace
+.fleet/
+
+# Unreal Engine build & intermediate artifacts
+/Binaries/
+/DerivedDataCache/
+/Intermediate/
+/Saved/
+/Build/
+/Packaged/
+
+# Plugins intermediate & binaries (all levels)
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
+Plugins/**/DerivedDataCache/
+
+# User-specific config
+Config/User*.ini
+Config/**/User*.ini
+
+# Developer & personal collections in Content
+Content/Developers/
+Content/Collections/
+
+# Crash reports and memory dumps
+*.dmp
+*.crashdump
+*.log
+
+# OS generated files
+Thumbs.db
+Desktop.ini
+.DS_Store
