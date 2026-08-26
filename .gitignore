@@ -47,6 +47,12 @@ Config/**/User*.ini
 Content/Developers/
 Content/Collections/
 
+# Marketplace / Fab asset packs (원본은 커밋하지 않음)
+# 수정이 필요하면 원본을 건드리지 말고 복제본을 별도 폴더에 만들어 커밋한다.
+Content/Hearthvale/
+Content/__ExternalActors__/Hearthvale/
+Content/__ExternalObjects__/Hearthvale/
+
 # Crash reports and memory dumps
 *.dmp
 *.crashdump
