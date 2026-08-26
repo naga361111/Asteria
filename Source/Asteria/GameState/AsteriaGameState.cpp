@@ -11,8 +11,6 @@ void AAsteriaGameState::GenerateSystemQuestPulls()
 		FQuest Quest = { FMath::RandRange(0, 100) };
 		SystemQuestPulls.Add(Quest);
 	}
-	
-	UE_LOG(LogTemp, Warning, TEXT("Quest Pulls Generated: %d"), QuestPullsCount);
 }
 
 void AAsteriaGameState::BeginPlay()
