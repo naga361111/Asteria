@@ -7,7 +7,12 @@ public class Asteria : ModuleRules
 	public Asteria(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-	
+
+		// UE5.8 no longer adds the module root to include paths automatically,
+		// so subfolder includes like "Player/AsteriaPlayer.h" (relative to the
+		// module root) fail to resolve. Add the module root back explicitly.
+		PublicIncludePaths.Add(ModuleDirectory);
+
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
