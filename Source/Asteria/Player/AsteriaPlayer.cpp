@@ -104,8 +104,15 @@ void AAsteriaPlayer::Interact(const FInputActionValue& Value)
 	if (OverlappedActor.IsValid())
 	{
 		APlayerController* PC = GetController<APlayerController>();
-		PC->bShowMouseCursor = !PC->bShowMouseCursor;
-		PC->SetInputMode(FInputModeGameAndUI());
+		if (!PC->bShowMouseCursor)
+		{
+			PC->bShowMouseCursor = true;
+			PC->SetInputMode(FInputModeGameAndUI());
+		} else
+		{
+			PC->bShowMouseCursor = false;
+			PC->SetInputMode(FInputModeGameOnly());
+		}
 	}
 }
 
