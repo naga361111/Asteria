@@ -5,14 +5,15 @@
 
 #include "QuestEntryObject.h"
 #include "Components/TextBlock.h"
+#include "Kismet/GameplayStatics.h"
 
 void USystemQuestTile::NativeOnListItemObjectSet(UObject* ListItemObject)
 {
 	// BP OnListItemObjectSet 이벤트가 계속 발동하도록 인터페이스 기본 구현 호출.
 	IUserObjectListEntry::NativeOnListItemObjectSet(ListItemObject);
 
-	UQuestEntryObject* Entry = Cast<UQuestEntryObject>(ListItemObject);
-	QuestIdText->SetText(FText::AsNumber(Entry->QuestId));
+	Entry = Cast<UQuestEntryObject>(ListItemObject);
+	QuestIdText->SetText(FText::AsNumber(Entry->Quest.QuestId));
 }
 
 void USystemQuestTile::NativeConstruct()
@@ -22,5 +23,8 @@ void USystemQuestTile::NativeConstruct()
 
 void USystemQuestTile::OnConfirmButtonClicked()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Clicked"))
+	AActor* QbActor = UGameplayStatics::GetActorOfClass(GetWorld(), AQuestBoard::StaticClass());
+	AQuestBoard* Qb = Cast<AQuestBoard>(QbActor);
+
+	Qb->AddQuestsPull(Entry->Quest);
 }

@@ -3,9 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "QuestEntryObject.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/IUserObjectListEntry.h"
 #include "Components/Button.h"
+#include "Quest/QuestBoard.h"
 #include "SystemQuestTile.generated.h"
 
 /**
@@ -21,6 +23,9 @@ class ASTERIA_API USystemQuestTile : public UUserWidget, public IUserObjectListE
 public:
 	virtual void NativeOnListItemObjectSet(UObject* ListItemObject) override;
 
+	UPROPERTY()
+	TObjectPtr<UQuestEntryObject> Entry;
+	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<class UTextBlock> QuestIdText;
 	

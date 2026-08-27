@@ -3,10 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Quest/Quest.h"
 #include "UObject/Object.h"
 #include "QuestEntryObject.generated.h"
 
-struct FQuest;
 /**
  * 
  */
@@ -17,5 +17,5 @@ class ASTERIA_API UQuestEntryObject : public UObject
 
 public:
 	UPROPERTY()
-	int32 QuestId;
+	FQuest Quest;
 };

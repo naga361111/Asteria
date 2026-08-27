@@ -17,7 +17,7 @@ void USystemQuestTileViewWidget::NativeConstruct()
 	for (const FQuest& Quest : SystemQuestsPull)
 	{
 		UQuestEntryObject* EntryObject = NewObject<UQuestEntryObject>(this);
-		EntryObject->QuestId = Quest.QuestId;
+		EntryObject->Quest = Quest;
 		
 		TileView->AddItem(EntryObject);
 	}
