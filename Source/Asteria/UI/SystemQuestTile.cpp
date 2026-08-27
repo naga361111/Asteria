@@ -15,3 +15,12 @@ void USystemQuestTile::NativeOnListItemObjectSet(UObject* ListItemObject)
 	QuestIdText->SetText(FText::AsNumber(Entry->QuestId));
 }
 
+void USystemQuestTile::NativeConstruct()
+{
+	QuestButton->OnClicked.AddDynamic(this, &USystemQuestTile::OnConfirmButtonClicked);
+}
+
+void USystemQuestTile::OnConfirmButtonClicked()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Clicked"))
+}
