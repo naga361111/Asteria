@@ -13,8 +13,6 @@ void USystemQuestTileViewWidget::NativeConstruct()
 	
 	const AAsteriaGameState* GS = GetWorld()->GetGameState<AAsteriaGameState>();
 	const TArray<FQuest>& SystemQuestsPull = GS->SystemQuestPulls;
-
-	UE_LOG(LogTemp, Warning, TEXT("SystemQuestsPullCount: %d"), SystemQuestsPull.Num())
 	
 	for (const FQuest& Quest : SystemQuestsPull)
 	{
