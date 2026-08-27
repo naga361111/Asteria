@@ -6,6 +6,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Interaction/Interactable.h"
 
 // Sets default values
 AAsteriaPlayer::AAsteriaPlayer()
@@ -25,6 +26,27 @@ AAsteriaPlayer::AAsteriaPlayer()
 	
 	BoxComp = CreateDefaultSubobject<UBoxComponent>(FName("InteractionArea"));
 	BoxComp->SetupAttachment(CameraComp);
+
+	// 오버랩 이벤트를 실제로 발생시키려면 이게 켜져 있어야 한다.
+	BoxComp->SetGenerateOverlapEvents(true);
+}
+
+void AAsteriaPlayer::OnDetectionBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor != nullptr && OtherActor != this && OtherActor->Implements<UInteractable>())
+	{
+		OverlappedActor = OtherActor;
+	}
+}
+
+void AAsteriaPlayer::OnDetectionEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	if (OtherActor == OverlappedActor)
+	{
+		OverlappedActor = nullptr;
+	}	
 }
 
 // Called when the game starts or when spawned
@@ -43,6 +65,11 @@ void AAsteriaPlayer::BeginPlay()
 			}
 		}
 	}
+	
+	// --- 델리게이트 바인딩 ---
+	// AddDynamic(수신 객체, &클래스::핸들러). 핸들러는 위에서 선언한 UFUNCTION들.
+	BoxComp->OnComponentBeginOverlap.AddDynamic(this, &AAsteriaPlayer::OnDetectionBeginOverlap);
+	BoxComp->OnComponentEndOverlap.AddDynamic(this, &AAsteriaPlayer::OnDetectionEndOverlap);
 }
 
 // Called every frame

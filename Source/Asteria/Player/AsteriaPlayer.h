@@ -43,6 +43,18 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UBoxComponent> BoxComp;
+	
+	// OnComponentBeginOverlap 델리게이트 시그니처와 1:1 대응. UFUNCTION() 필수(동적 델리게이트라 리플렉션 필요).
+	UFUNCTION()
+	void OnDetectionBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	// OnComponentEndOverlap 델리게이트 시그니처. Begin과 달리 bFromSweep/SweepResult 인자가 없다.
+	UFUNCTION()
+	void OnDetectionEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	
+	TWeakObjectPtr<AActor> OverlappedActor;
 
 public:
 	// Called every frame
