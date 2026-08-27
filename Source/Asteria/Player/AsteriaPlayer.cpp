@@ -17,6 +17,14 @@ AAsteriaPlayer::AAsteriaPlayer()
 	bUseControllerRotationYaw = true;
 	bUseControllerRotationPitch = true;
 	bUseControllerRotationRoll = false;
+	
+	CameraComp = CreateDefaultSubobject<UCameraComponent>(FName("Camera"));
+	CameraComp->SetupAttachment(RootComponent);
+	CameraComp->bUsePawnControlRotation = true;
+	CameraComp->SetRelativeLocation(FVector(20.0f, 0.0f, 70.0f));
+	
+	BoxComp = CreateDefaultSubobject<UBoxComponent>(FName("InteractionArea"));
+	BoxComp->SetupAttachment(CameraComp);
 }
 
 // Called when the game starts or when spawned

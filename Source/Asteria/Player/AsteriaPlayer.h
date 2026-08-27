@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Camera/CameraComponent.h"
+#include "Components/BoxComponent.h"
 #include "GameFramework/Character.h"
 #include "AsteriaPlayer.generated.h"
 
@@ -35,6 +37,12 @@ protected:
 
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
+	
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UCameraComponent> CameraComp;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UBoxComponent> BoxComp;
 
 public:
 	// Called every frame
