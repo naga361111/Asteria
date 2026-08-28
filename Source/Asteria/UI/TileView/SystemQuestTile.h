@@ -7,6 +7,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/IUserObjectListEntry.h"
 #include "Components/Button.h"
+#include "GameState/AsteriaGameState.h"
 #include "SystemQuestTile.generated.h"
 
 /**

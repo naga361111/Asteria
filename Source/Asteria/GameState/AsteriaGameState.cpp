@@ -14,3 +14,12 @@ void AAsteriaGameState::BeginPlay()
 		QuestPulls.Add(Quest);
 	}
 }
+
+void AAsteriaGameState::PostQuest(int32 QuestId)
+{
+	FQuest* Found  = QuestPulls.FindByPredicate([QuestId](const FQuest& Quest) { return Quest.QuestId == QuestId; });
+	if (Found != nullptr)
+	{
+		Found->bIsPosted = true;
+	}
+}

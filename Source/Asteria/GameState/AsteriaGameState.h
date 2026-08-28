@@ -23,4 +23,6 @@ public:
 	int32 QuestPullsCount = 1;
 	
 	virtual void BeginPlay() override;
+	
+	void PostQuest(int32 QuestId);
 };
