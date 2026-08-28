@@ -17,13 +17,10 @@ class ASTERIA_API AAsteriaGameState : public AGameStateBase
 	
 public:
 	UPROPERTY(VisibleAnywhere, Category = "Quest")
-	TArray<FQuest> SystemQuestPulls;
+	TArray<FQuest> QuestPulls;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Quest", meta = (ClampMin = 1, ClampMax = 100, UIMin = 1, UIMax = 100))
 	int32 QuestPullsCount = 1;
 	
 	virtual void BeginPlay() override;
-private:
-	UFUNCTION()
-	void GenerateSystemQuestPulls();
 };

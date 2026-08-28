@@ -7,7 +7,6 @@
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/IUserObjectListEntry.h"
 #include "Components/Button.h"
-#include "Quest/QuestBoard.h"
 #include "SystemQuestTile.generated.h"
 
 /**

@@ -10,4 +10,7 @@ struct FQuest
 	
 	UPROPERTY(VisibleAnywhere)
 	int32 QuestId;
+	
+	UPROPERTY(VisibleAnywhere)
+	bool bIsPosted;
 };

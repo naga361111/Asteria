@@ -3,16 +3,16 @@
 
 #include "UI/SystemQuestTileViewWidget.h"
 
-#include "QuestEntryObject.h"
 #include "Components/TileView.h"
 #include "Quest/Quest.h"
 #include "GameState/AsteriaGameState.h"
+#include "TileView/QuestEntryObject.h"
 
 void USystemQuestTileViewWidget::NativeConstruct()
 {
 	
 	const AAsteriaGameState* GS = GetWorld()->GetGameState<AAsteriaGameState>();
-	const TArray<FQuest>& SystemQuestsPull = GS->SystemQuestPulls;
+	const TArray<FQuest>& SystemQuestsPull = GS->QuestPulls;
 	
 	for (const FQuest& Quest : SystemQuestsPull)
 	{

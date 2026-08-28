@@ -1,11 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "UI/SystemQuestTile.h"
+#include "SystemQuestTile.h"
 
 #include "QuestEntryObject.h"
 #include "Components/TextBlock.h"
-#include "Kismet/GameplayStatics.h"
 
 void USystemQuestTile::NativeOnListItemObjectSet(UObject* ListItemObject)
 {
@@ -23,8 +22,4 @@ void USystemQuestTile::NativeConstruct()
 
 void USystemQuestTile::OnConfirmButtonClicked()
 {
-	AActor* QbActor = UGameplayStatics::GetActorOfClass(GetWorld(), AQuestBoard::StaticClass());
-	AQuestBoard* Qb = Cast<AQuestBoard>(QbActor);
-
-	Qb->AddQuestsPull(Entry->Quest);
 }

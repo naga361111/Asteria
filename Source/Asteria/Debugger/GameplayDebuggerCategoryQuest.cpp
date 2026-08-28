@@ -5,8 +5,7 @@
 #include "GameplayDebuggerTypes.h"
 #include "GameFramework/PlayerController.h"
 #include "GameState/AsteriaGameState.h"
-#include "Kismet/GameplayStatics.h"
-#include "Quest/QuestBoard.h"
+#include "Quest/Quest.h"
 
 FGameplayDebuggerCategoryQuest::FGameplayDebuggerCategoryQuest()
 {
@@ -33,17 +32,13 @@ void FGameplayDebuggerCategoryQuest::DrawData(APlayerController* OwnerPC, FGamep
 		return;
 	}
 
-	CanvasContext.Printf(TEXT("{yellow}System quest pulls: {white}%d"), GameState->SystemQuestPulls.Num());
-	
-	AActor* QbActor = UGameplayStatics::GetActorOfClass(World, AQuestBoard::StaticClass());
-	AQuestBoard* Qb = Cast<AQuestBoard>(QbActor);
-	if (Qb == nullptr)
+	int32 PostedQuestCount = 0;
+	for (FQuest Quest : GameState->QuestPulls)
 	{
-		CanvasContext.Printf(TEXT("{red}No AQuestBoard"));
-		return;
+		if (Quest.bIsPosted) PostedQuestCount++;
 	}
-	
-	CanvasContext.Printf(TEXT("{yellow}quest board pulls: {white}%d"), Qb->QuestsPull.Num());
+	CanvasContext.Printf(TEXT("{yellow}generated quest pulls: {white}%d"), GameState->QuestPulls.Num());
+	CanvasContext.Printf(TEXT("{yellow}posted quest pulls: {white}%d"), PostedQuestCount);
 }
 
 #endif // WITH_GAMEPLAY_DEBUGGER
