@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Quest.h"
+#include "Components/WidgetComponent.h"
 #include "GameFramework/Actor.h"
 #include "QuestBoard.generated.h"
 
@@ -26,6 +27,12 @@ public:
 
 	UPROPERTY(VisibleAnywhere)
 	TArray<FQuest> QuestsPull;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UStaticMeshComponent> QuestBoardMeshComp;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UWidgetComponent> QuestBoardWidgetComp;
 	
 	void AddQuestsPull(const FQuest& Quest);
 };
