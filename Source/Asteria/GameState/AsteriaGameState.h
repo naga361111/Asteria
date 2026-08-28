@@ -6,6 +6,8 @@
 #include "GameFramework/GameStateBase.h"
 #include "AsteriaGameState.generated.h"
 
+DECLARE_MULTICAST_DELEGATE(FOnQuestPullsChanged)
+
 struct FQuest;
 /**
  * 
@@ -25,4 +27,6 @@ public:
 	virtual void BeginPlay() override;
 	
 	void PostQuest(int32 QuestId);
+	
+	FOnQuestPullsChanged OnQuestPullsChanged;
 };

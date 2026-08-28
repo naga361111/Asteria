@@ -13,6 +13,7 @@ void AAsteriaGameState::BeginPlay()
 		FQuest Quest = {FMath::RandRange(0, 100), false};
 		QuestPulls.Add(Quest);
 	}
+	OnQuestPullsChanged.Broadcast();
 }
 
 void AAsteriaGameState::PostQuest(int32 QuestId)
@@ -22,4 +23,5 @@ void AAsteriaGameState::PostQuest(int32 QuestId)
 	{
 		Found->bIsPosted = true;
 	}
+	OnQuestPullsChanged.Broadcast();
 }

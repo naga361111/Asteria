@@ -10,15 +10,39 @@
 
 void USystemQuestTileViewWidget::NativeConstruct()
 {
+	AAsteriaGameState* GS = GetWorld()->GetGameState<AAsteriaGameState>();
+	GS->OnQuestPullsChanged.AddUObject(this, &USystemQuestTileViewWidget::RefreshTiles);
 	
+	RefreshTiles();
+}
+
+void USystemQuestTileViewWidget::RefreshTiles()
+{
 	const AAsteriaGameState* GS = GetWorld()->GetGameState<AAsteriaGameState>();
 	const TArray<FQuest>& SystemQuestsPull = GS->QuestPulls;
 	
-	for (const FQuest& Quest : SystemQuestsPull)
+	TileView->ClearListItems();
+
+	if (QuestType == EQuestType::System)
 	{
-		UQuestEntryObject* EntryObject = NewObject<UQuestEntryObject>(this);
-		EntryObject->Quest = Quest;
-		
-		TileView->AddItem(EntryObject);
+		for (const FQuest& Quest : SystemQuestsPull)
+		{
+			if (Quest.bIsPosted) continue;
+
+			UQuestEntryObject* EntryObject = NewObject<UQuestEntryObject>(this);
+			EntryObject->Quest = Quest;
+			TileView->AddItem(EntryObject);
+		}
+	}
+	else
+	{
+		for (const FQuest& Quest : SystemQuestsPull)
+		{
+			if (!Quest.bIsPosted) continue;
+
+			UQuestEntryObject* EntryObject = NewObject<UQuestEntryObject>(this);
+			EntryObject->Quest = Quest;
+			TileView->AddItem(EntryObject);
+		}
 	}
 }

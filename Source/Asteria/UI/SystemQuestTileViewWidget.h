@@ -6,6 +6,13 @@
 #include "Blueprint/UserWidget.h"
 #include "SystemQuestTileViewWidget.generated.h"
 
+UENUM(BlueprintType)
+enum class EQuestType : uint8
+{
+	System,
+	Post,
+};
+
 class UTileView;
 /**
  * 
@@ -19,4 +26,10 @@ class ASTERIA_API USystemQuestTileViewWidget : public UUserWidget
 	TObjectPtr<UTileView> TileView;
 	
 	virtual void NativeConstruct() override;
+	
+public:
+	UPROPERTY(EditDefaultsOnly, Category="Quest")
+	EQuestType QuestType;
+	
+	void RefreshTiles();
 };
