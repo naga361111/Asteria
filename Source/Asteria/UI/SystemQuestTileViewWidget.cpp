@@ -31,6 +31,7 @@ void USystemQuestTileViewWidget::RefreshTiles()
 
 			UQuestEntryObject* EntryObject = NewObject<UQuestEntryObject>(this);
 			EntryObject->Quest = Quest;
+			EntryObject->QuestType = QuestType;
 			TileView->AddItem(EntryObject);
 		}
 	}
@@ -42,6 +43,7 @@ void USystemQuestTileViewWidget::RefreshTiles()
 
 			UQuestEntryObject* EntryObject = NewObject<UQuestEntryObject>(this);
 			EntryObject->Quest = Quest;
+			EntryObject->QuestType = QuestType;
 			TileView->AddItem(EntryObject);
 		}
 	}

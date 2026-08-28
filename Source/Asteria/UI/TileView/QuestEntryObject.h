@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Quest/Quest.h"
+#include "UI/SystemQuestTileViewWidget.h"
 #include "UObject/Object.h"
 #include "QuestEntryObject.generated.h"
 
@@ -18,4 +19,7 @@ class ASTERIA_API UQuestEntryObject : public UObject
 public:
 	UPROPERTY()
 	FQuest Quest;
+	
+	UPROPERTY()
+	EQuestType QuestType;
 };

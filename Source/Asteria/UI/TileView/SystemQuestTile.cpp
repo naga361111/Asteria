@@ -22,5 +22,12 @@ void USystemQuestTile::NativeConstruct()
 
 void USystemQuestTile::OnConfirmButtonClicked()
 {
-	GetWorld()->GetGameState<AAsteriaGameState>()->PostQuest(Entry->Quest.QuestId);
+	if (Entry->QuestType == EQuestType::System)
+	{
+		GetWorld()->GetGameState<AAsteriaGameState>()->PostQuest(Entry->Quest.QuestId);
+	}
+	else
+	{
+		GetWorld()->GetGameState<AAsteriaGameState>()->UnpostQuest(Entry->Quest.QuestId);
+	}
 }
