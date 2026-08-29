@@ -68,4 +68,9 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	UFUNCTION(Server, Reliable)
+	void Server_PostQuest(int32 QuestId);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_UnpostQuest(int32 QuestId);
 };

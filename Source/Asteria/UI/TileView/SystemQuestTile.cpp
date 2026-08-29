@@ -5,6 +5,7 @@
 
 #include "QuestEntryObject.h"
 #include "Components/TextBlock.h"
+#include "Player/AsteriaPlayer.h"
 
 void USystemQuestTile::NativeOnListItemObjectSet(UObject* ListItemObject)
 {
@@ -24,10 +25,10 @@ void USystemQuestTile::OnConfirmButtonClicked()
 {
 	if (Entry->QuestType == EQuestType::System)
 	{
-		GetWorld()->GetGameState<AAsteriaGameState>()->PostQuest(Entry->Quest.QuestId);
+		GetOwningPlayerPawn<AAsteriaPlayer>()->Server_PostQuest(Entry->Quest.QuestId);
 	}
 	else
 	{
-		GetWorld()->GetGameState<AAsteriaGameState>()->UnpostQuest(Entry->Quest.QuestId);
+		GetOwningPlayerPawn<AAsteriaPlayer>()->Server_UnpostQuest(Entry->Quest.QuestId);
 	}
 }

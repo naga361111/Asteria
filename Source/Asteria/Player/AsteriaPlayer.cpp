@@ -6,6 +6,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "GameState/AsteriaGameState.h"
 #include "Interaction/Interactable.h"
 
 // Sets default values
@@ -35,6 +36,8 @@ void AAsteriaPlayer::OnDetectionBeginOverlap(UPrimitiveComponent* OverlappedComp
                                              UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
                                              const FHitResult& SweepResult)
 {
+	if (!IsLocallyControlled()) return;
+	
 	if (OtherActor != nullptr && OtherActor != this && OtherActor->Implements<UInteractable>())
 	{
 		OverlappedActor = OtherActor;
@@ -44,6 +47,8 @@ void AAsteriaPlayer::OnDetectionBeginOverlap(UPrimitiveComponent* OverlappedComp
 void AAsteriaPlayer::OnDetectionEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
                                            UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+	if (!IsLocallyControlled()) return;
+	
 	if (OtherActor == OverlappedActor)
 	{
 		OverlappedActor = nullptr;
@@ -101,6 +106,8 @@ void AAsteriaPlayer::Look(const FInputActionValue& Value)
 
 void AAsteriaPlayer::Interact(const FInputActionValue& Value)
 {
+	if (!IsLocallyControlled()) return;
+	
 	if (OverlappedActor.IsValid())
 	{
 		APlayerController* PC = GetController<APlayerController>();
@@ -127,4 +134,15 @@ void AAsteriaPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		EIC->BindAction(LookAction, ETriggerEvent::Triggered, this, &AAsteriaPlayer::Look);
 		EIC->BindAction(InteractAction, ETriggerEvent::Started, this, &AAsteriaPlayer::Interact);
 	}
+}
+
+void AAsteriaPlayer::Server_PostQuest_Implementation(int32 QuestId)
+{
+	GetWorld()->GetGameState<AAsteriaGameState>()->PostQuest(QuestId);
+}
+
+void AAsteriaPlayer::Server_UnpostQuest_Implementation(int32 QuestId)
+{
+	GetWorld()->GetGameState<AAsteriaGameState>()->UnpostQuest(QuestId);
+
 }

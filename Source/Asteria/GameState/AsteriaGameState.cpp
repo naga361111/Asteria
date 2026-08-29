@@ -3,21 +3,40 @@
 
 #include "GameState/AsteriaGameState.h"
 #include "Quest/Quest.h"
+#include "Net/UnrealNetwork.h"
+
+void AAsteriaGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(AAsteriaGameState, QuestPulls)
+}
+
+void AAsteriaGameState::OnRep_QuestPulls()
+{
+	OnQuestPullsChanged.Broadcast();
+}
 
 void AAsteriaGameState::BeginPlay()
 {
 	Super::BeginPlay();
 
-	for (int i = 0; i < QuestPullsCount; ++i)
+	if (HasAuthority())
 	{
-		FQuest Quest = {FMath::RandRange(0, 100), false};
-		QuestPulls.Add(Quest);
+		for (int i = 0; i < QuestPullsCount; ++i)
+		{
+			FQuest Quest = {FMath::RandRange(0, 100), false};
+			QuestPulls.Add(Quest);
+		}
+		OnQuestPullsChanged.Broadcast();
 	}
-	OnQuestPullsChanged.Broadcast();
+	
 }
 
 void AAsteriaGameState::PostQuest(int32 QuestId)
 {
+	if (!HasAuthority()) return;
+	
 	FQuest* Found  = QuestPulls.FindByPredicate([QuestId](const FQuest& Quest) { return Quest.QuestId == QuestId; });
 	if (Found != nullptr)
 	{
@@ -28,6 +47,8 @@ void AAsteriaGameState::PostQuest(int32 QuestId)
 
 void AAsteriaGameState::UnpostQuest(int32 QuestId)
 {
+	if (!HasAuthority()) return;
+	
 	FQuest* Found  = QuestPulls.FindByPredicate([QuestId](const FQuest& Quest) { return Quest.QuestId == QuestId; });
 	if (Found != nullptr)
 	{
