@@ -33,6 +33,7 @@
 /Saved/
 /Build/
 /Packaged/
+/Shipping/
 
 # Plugins intermediate & binaries (all levels)
 Plugins/**/Binaries/
