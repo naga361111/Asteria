@@ -3,15 +3,18 @@
 
 #include "BTNodes/BTTask_GetQuest.h"
 
+#include "AIController.h"
 #include "GameState/AsteriaGameState.h"
+#include "NPC/AsteriaNpc.h"
 
 EBTNodeResult::Type UBTTask_GetQuest::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
 	AAsteriaGameState* AGS = GetWorld()->GetGameState<AAsteriaGameState>();
-
-	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Cyan, FString::Printf(
-		                                 TEXT("[%d]Accepted quest id: %d"), GetWorld()->GetNetMode(),
-		                                 AGS->GetQuest()));
-
+	AAsteriaNpc* OwnerNpc = OwnerComp.GetAIOwner()->GetPawn<AAsteriaNpc>();
+	
+	if (AGS == nullptr || OwnerNpc == nullptr) return EBTNodeResult::Failed;
+	
+	OwnerNpc->AcceptedQuests.Add(AGS->GetQuest());
+	
 	return EBTNodeResult::Succeeded;
 }

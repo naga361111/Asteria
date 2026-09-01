@@ -23,10 +23,13 @@ void AAsteriaGameState::BeginPlay()
 
 	if (HasAuthority())
 	{
+		int32 QuestIndex = 0;
 		for (int i = 0; i < QuestPullsCount; ++i)
 		{
-			FQuest Quest = {FMath::RandRange(0, 100), false};
+			FQuest Quest = {QuestIndex, false, false};
 			QuestPulls.Add(Quest);
+
+			QuestIndex++;
 		}
 		OnQuestPullsChanged.Broadcast();
 	}
@@ -69,6 +72,6 @@ int32 AAsteriaGameState::GetQuest()
 			return Quest.QuestId;
 		}
 	}
-	
+
 	return -1;
 }
