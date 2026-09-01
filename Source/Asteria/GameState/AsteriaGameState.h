@@ -35,4 +35,6 @@ public:
 	void UnpostQuest(int32 QuestId);
 	
 	FOnQuestPullsChanged OnQuestPullsChanged;
+	
+	int32 GetQuest(); 
 };

@@ -13,4 +13,7 @@ struct FQuest
 	
 	UPROPERTY(VisibleAnywhere)
 	bool bIsPosted;
+	
+	UPROPERTY(VisibleAnywhere)
+	bool bIsAccepted;
 };

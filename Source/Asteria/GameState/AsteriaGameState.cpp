@@ -8,7 +8,7 @@
 void AAsteriaGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	
+
 	DOREPLIFETIME(AAsteriaGameState, QuestPulls)
 }
 
@@ -30,14 +30,13 @@ void AAsteriaGameState::BeginPlay()
 		}
 		OnQuestPullsChanged.Broadcast();
 	}
-	
 }
 
 void AAsteriaGameState::PostQuest(int32 QuestId)
 {
 	if (!HasAuthority()) return;
-	
-	FQuest* Found  = QuestPulls.FindByPredicate([QuestId](const FQuest& Quest) { return Quest.QuestId == QuestId; });
+
+	FQuest* Found = QuestPulls.FindByPredicate([QuestId](const FQuest& Quest) { return Quest.QuestId == QuestId; });
 	if (Found != nullptr)
 	{
 		Found->bIsPosted = true;
@@ -48,11 +47,28 @@ void AAsteriaGameState::PostQuest(int32 QuestId)
 void AAsteriaGameState::UnpostQuest(int32 QuestId)
 {
 	if (!HasAuthority()) return;
-	
-	FQuest* Found  = QuestPulls.FindByPredicate([QuestId](const FQuest& Quest) { return Quest.QuestId == QuestId; });
+
+	FQuest* Found = QuestPulls.FindByPredicate([QuestId](const FQuest& Quest) { return Quest.QuestId == QuestId; });
 	if (Found != nullptr)
 	{
 		Found->bIsPosted = false;
 	}
 	OnQuestPullsChanged.Broadcast();
+}
+
+int32 AAsteriaGameState::GetQuest()
+{
+	if (QuestPulls.Num() == 0) return -1;
+
+	for (FQuest& Quest : QuestPulls)
+	{
+		if (Quest.bIsPosted && !Quest.bIsAccepted)
+		{
+			Quest.bIsAccepted = true;
+
+			return Quest.QuestId;
+		}
+	}
+	
+	return -1;
 }
