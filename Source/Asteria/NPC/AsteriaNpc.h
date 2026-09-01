@@ -14,6 +14,14 @@ class ASTERIA_API AAsteriaNpc : public ACharacter
 public:
 	// Sets default values for this character's properties
 	AAsteriaNpc();
+	
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_Level ,Category="Npc")
+	int32 NpcLevel = 1;
+	
+	UFUNCTION()
+	void OnRep_Level();
 
 protected:
 	// Called when the game starts or when spawned
@@ -28,4 +36,8 @@ public:
 	
 	UPROPERTY(VisibleAnywhere, Category= "Quest")
 	TArray<int32> AcceptedQuests;
+	
+	void NpcLevelUp();
+	
+	
 };

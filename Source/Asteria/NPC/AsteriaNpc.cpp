@@ -2,33 +2,46 @@
 
 
 #include "NPC/AsteriaNpc.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values
 AAsteriaNpc::AAsteriaNpc()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+}
 
+void AAsteriaNpc::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AAsteriaNpc, NpcLevel);
+}
+
+void AAsteriaNpc::OnRep_Level()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Cyan, FString::Printf(TEXT("Lvl: %d"), NpcLevel));
 }
 
 // Called when the game starts or when spawned
 void AAsteriaNpc::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 // Called every frame
 void AAsteriaNpc::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 // Called to bind functionality to input
 void AAsteriaNpc::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
 }
 
+void AAsteriaNpc::NpcLevelUp()
+{
+	NpcLevel++;
+}

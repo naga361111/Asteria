@@ -29,13 +29,16 @@ EBTNodeResult::Type UBTTask_DoQuest::ExecuteTask(UBehaviorTreeComponent& OwnerCo
 			break;
 		}
 	}
+	
+	if (SelectedQuest == -1) return EBTNodeResult::Failed;
 
 	FTimerHandle Handle;
 	GetWorld()->GetTimerManager().SetTimer(
 		Handle,
-		FTimerDelegate::CreateLambda([this, &OwnerComp, AGS, SelectedQuest]()
+		FTimerDelegate::CreateLambda([this, &OwnerComp, AGS, SelectedQuest, OwnerNpc]()
 		{
 			AGS->ClearQuest(SelectedQuest);
+			OwnerNpc->NpcLevelUp();
 
 			FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 		}),
