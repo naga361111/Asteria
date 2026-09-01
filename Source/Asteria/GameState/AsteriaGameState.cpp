@@ -69,9 +69,26 @@ int32 AAsteriaGameState::GetQuest()
 		{
 			Quest.bIsAccepted = true;
 
+			OnQuestPullsChanged.Broadcast();
 			return Quest.QuestId;
 		}
 	}
 
+	OnQuestPullsChanged.Broadcast();
 	return -1;
+}
+
+void AAsteriaGameState::ClearQuest(int32 QuestId)
+{
+	if (!HasAuthority()) return;
+
+	FQuest* Found = QuestPulls.FindByPredicate([QuestId](const FQuest& Quest) { return Quest.QuestId == QuestId; });
+	if (Found != nullptr)
+	{
+		Found->bIsCleared = true;
+		
+		UE_LOG(LogTemp, Warning, TEXT("%d has %d"), QuestId, Found->bIsCleared);
+	}
+	
+	OnQuestPullsChanged.Broadcast();
 }

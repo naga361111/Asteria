@@ -37,4 +37,6 @@ public:
 	FOnQuestPullsChanged OnQuestPullsChanged;
 	
 	int32 GetQuest(); 
+	
+	void ClearQuest(int32 QuestId);
 };

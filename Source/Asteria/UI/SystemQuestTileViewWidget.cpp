@@ -39,7 +39,7 @@ void USystemQuestTileViewWidget::RefreshTiles()
 	{
 		for (const FQuest& Quest : SystemQuestsPull)
 		{
-			if (!Quest.bIsPosted) continue;
+			if (!Quest.bIsPosted || Quest.bIsCleared) continue;
 
 			UQuestEntryObject* EntryObject = NewObject<UQuestEntryObject>(this);
 			EntryObject->Quest = Quest;
