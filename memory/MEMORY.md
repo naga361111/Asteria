@@ -1,0 +1,5 @@
+- [Script folder organization](script-folder-organization.md) — 소스는 항상 폴더로 그룹화, 모듈 루트에 flat 금지
+- [Project direction](project-direction-guild-sim.md) — 코옵 모험가 길드 홀 시뮬(A형)로 스코프 축소 확정, 던전 추상·회색박스 코어부터
+- [Todo list](todoList.md) — 퀘스트 랭크 시스템·보상(재화/아이템) 도입 계획, 모든 시스템은 서버-호스트 동기화 전제
+- [Quest rank system](quest-rank-system.md) — 퀘스트 랭크 F~S 7단계 알파벳 확정, 인덱스 기반 난이도/보상 커브
+- [API design guidance role](api-design-guidance-role.md) — 코드는 유저가 작성, 나는 API 설계 허점 분석·리팩토링 수준 유도 담당
