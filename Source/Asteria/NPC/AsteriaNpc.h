@@ -22,7 +22,7 @@ public:
 	int32 NpcLevel = 1;
 	
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_Rank, Category="Npc")
-	ERank NpcRank;
+	ERank NpcRank = ERank::F;
 	
 	UFUNCTION()
 	void OnRep_Level();
@@ -44,7 +44,9 @@ public:
 	UPROPERTY(VisibleAnywhere, Category= "Quest")
 	TArray<int32> AcceptedQuests;
 	
+	void QuestCleared();
 	void NpcLevelUp();
+	void NpcRankUp();
 	
 	
 };

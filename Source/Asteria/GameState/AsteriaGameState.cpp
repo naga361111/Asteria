@@ -26,7 +26,7 @@ void AAsteriaGameState::BeginPlay()
 		int32 QuestIndex = 0;
 		for (int i = 0; i < QuestPullsCount; ++i)
 		{
-			const int32 LastIndex = StaticEnum<ERank>()->NumEnums() - 2; // -1: _MAX, -1: 인덱스 보정
+			const int32 LastIndex = StaticEnum<ERank>()->NumEnums() - 3; // -1: _MAX, -1: 인덱스 보정
 			ERank RandomRank = static_cast<ERank>(FMath::RandRange(0, LastIndex));
 			
 			FQuest Quest = {QuestIndex, false, false, false, RandomRank};

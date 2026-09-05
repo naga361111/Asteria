@@ -38,7 +38,7 @@ EBTNodeResult::Type UBTTask_DoQuest::ExecuteTask(UBehaviorTreeComponent& OwnerCo
 		FTimerDelegate::CreateLambda([this, &OwnerComp, AGS, SelectedQuest, OwnerNpc]()
 		{
 			AGS->ClearQuest(SelectedQuest);
-			OwnerNpc->NpcLevelUp();
+			OwnerNpc->QuestCleared();
 
 			FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 		}),

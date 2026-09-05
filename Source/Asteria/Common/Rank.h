@@ -12,5 +12,6 @@ enum class ERank: uint8
 	C,
 	B,
 	A,
-	S
+	S,
+	Count UMETA(Hidden)
 };

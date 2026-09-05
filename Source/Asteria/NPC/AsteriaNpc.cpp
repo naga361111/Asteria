@@ -47,7 +47,21 @@ void AAsteriaNpc::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 }
 
+void AAsteriaNpc::QuestCleared()
+{
+	NpcLevelUp();
+	NpcRankUp();
+}
+
 void AAsteriaNpc::NpcLevelUp()
 {
 	NpcLevel++;
+}
+
+void AAsteriaNpc::NpcRankUp()
+{
+	if (static_cast<uint8>(NpcRank) >= static_cast<uint8>(ERank::Count) - 1)
+		return;
+	
+	NpcRank = static_cast<ERank>(static_cast<uint8>(NpcRank) + 1);
 }
