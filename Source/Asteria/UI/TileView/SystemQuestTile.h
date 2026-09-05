@@ -29,6 +29,9 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<class UTextBlock> QuestIdText;
 	
+	UPROPERTY(meta= (BindWidget))
+	TObjectPtr<class UTextBlock> RcdRankText;
+	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> QuestButton;
 	

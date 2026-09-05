@@ -14,6 +14,7 @@ void USystemQuestTile::NativeOnListItemObjectSet(UObject* ListItemObject)
 
 	Entry = Cast<UQuestEntryObject>(ListItemObject);
 	QuestIdText->SetText(FText::AsNumber(Entry->Quest.QuestId));
+	RcdRankText->SetText(UEnum::GetDisplayValueAsText(Entry->Quest.RecommendedRank));
 }
 
 void USystemQuestTile::NativeConstruct()
