@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Common/Rank.h"
+#include "Common/RequiredRankUpData.h"
 #include "GameFramework/Character.h"
 #include "AsteriaNpc.generated.h"
 
@@ -24,11 +25,20 @@ public:
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_Rank, Category="Npc")
 	ERank NpcRank = ERank::F;
 	
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_CurrentClearedQuest, Category="Npc")
+	int32 ClearedCurrentRankQuestCount = 0;
+	
 	UFUNCTION()
 	void OnRep_Level();
 	
 	UFUNCTION()
 	void OnRep_Rank();
+	
+	UFUNCTION()
+	void OnRep_CurrentClearedQuest();
+	
+	UPROPERTY(EditDefaultsOnly, Category="Npc")
+	TObjectPtr<URequiredRankUpData> RequiredRankUpData;
 
 protected:
 	// Called when the game starts or when spawned
@@ -44,9 +54,7 @@ public:
 	UPROPERTY(VisibleAnywhere, Category= "Quest")
 	TArray<int32> AcceptedQuests;
 	
-	void QuestCleared();
+	void QuestCleared(ERank ClearedQuestRank);
 	void NpcLevelUp();
 	void NpcRankUp();
-	
-	
 };

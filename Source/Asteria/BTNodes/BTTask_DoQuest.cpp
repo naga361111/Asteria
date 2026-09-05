@@ -15,15 +15,16 @@ EBTNodeResult::Type UBTTask_DoQuest::ExecuteTask(UBehaviorTreeComponent& OwnerCo
 
 	if (AGS == nullptr || OwnerNpc == nullptr || OwnerNpc->AcceptedQuests.Num() == 0) return EBTNodeResult::Failed;
 
+	FQuest* FoundedQuest = nullptr;
 	int32 SelectedQuest = -1;
 	for (int32 QuestId : OwnerNpc->AcceptedQuests)
 	{
-		FQuest* Found = AGS->QuestPulls.FindByPredicate([QuestId](const FQuest& Quest)
+		FoundedQuest = AGS->QuestPulls.FindByPredicate([QuestId](const FQuest& Quest)
 		{
 			return Quest.QuestId == QuestId;
 		});
 
-		if (Found != nullptr && !Found->bIsCleared)
+		if (FoundedQuest != nullptr && !FoundedQuest->bIsCleared)
 		{
 			SelectedQuest = QuestId;
 			break;
@@ -35,10 +36,10 @@ EBTNodeResult::Type UBTTask_DoQuest::ExecuteTask(UBehaviorTreeComponent& OwnerCo
 	FTimerHandle Handle;
 	GetWorld()->GetTimerManager().SetTimer(
 		Handle,
-		FTimerDelegate::CreateLambda([this, &OwnerComp, AGS, SelectedQuest, OwnerNpc]()
+		FTimerDelegate::CreateLambda([this, &OwnerComp, AGS, SelectedQuest, OwnerNpc, FoundedQuest]()
 		{
 			AGS->ClearQuest(SelectedQuest);
-			OwnerNpc->QuestCleared();
+			OwnerNpc->QuestCleared(FoundedQuest->RecommendedRank);
 
 			FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 		}),

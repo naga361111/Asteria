@@ -16,17 +16,24 @@ void AAsteriaNpc::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AAsteriaNpc, NpcLevel);
-	DOREPLIFETIME(AAsteriaNpc, NpcRank)
+	DOREPLIFETIME(AAsteriaNpc, NpcRank);
+	DOREPLIFETIME(AAsteriaNpc, ClearedCurrentRankQuestCount);
 }
 
 void AAsteriaNpc::OnRep_Level()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Cyan, FString::Printf(TEXT("Lvl: %d"), NpcLevel));
+	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Cyan, FString::Printf(TEXT("Lvl: %d"), NpcLevel));
 }
 
 void AAsteriaNpc::OnRep_Rank()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Green, FString::Printf(TEXT("Rnk: %d"), NpcRank));
+	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, FString::Printf(TEXT("Rnk: %d"), NpcRank));
+}
+
+void AAsteriaNpc::OnRep_CurrentClearedQuest()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green,
+	                                 FString::Printf(TEXT("Cld: %d"), ClearedCurrentRankQuestCount));
 }
 
 // Called when the game starts or when spawned
@@ -47,8 +54,10 @@ void AAsteriaNpc::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 }
 
-void AAsteriaNpc::QuestCleared()
+void AAsteriaNpc::QuestCleared(ERank ClearedQuestRank)
 {
+	if (NpcRank == ClearedQuestRank) ClearedCurrentRankQuestCount++;
+
 	NpcLevelUp();
 	NpcRankUp();
 }
@@ -62,6 +71,14 @@ void AAsteriaNpc::NpcRankUp()
 {
 	if (static_cast<uint8>(NpcRank) >= static_cast<uint8>(ERank::Count) - 1)
 		return;
-	
+
+	if (!RequiredRankUpData) return;
+
+	const int32* Required = RequiredRankUpData->RequiredClears.Find(NpcRank);
+	if (!Required) return;
+
+	if (ClearedCurrentRankQuestCount < *Required) return;
+
 	NpcRank = static_cast<ERank>(static_cast<uint8>(NpcRank) + 1);
+	ClearedCurrentRankQuestCount = 0;
 }
