@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Common/Rank.h"
 #include "GameFramework/GameStateBase.h"
 #include "AsteriaGameState.generated.h"
 
@@ -36,7 +37,7 @@ public:
 	
 	FOnQuestPullsChanged OnQuestPullsChanged;
 	
-	int32 GetQuest(); 
+	int32 GetQuest(ERank CurrentNpcRank); 
 	
 	void ClearQuest(int32 QuestId);
 };

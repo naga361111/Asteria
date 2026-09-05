@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Common/Rank.h"
 #include "GameFramework/Character.h"
 #include "AsteriaNpc.generated.h"
 
@@ -20,8 +21,14 @@ public:
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_Level ,Category="Npc")
 	int32 NpcLevel = 1;
 	
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_Rank, Category="Npc")
+	ERank NpcRank;
+	
 	UFUNCTION()
 	void OnRep_Level();
+	
+	UFUNCTION()
+	void OnRep_Rank();
 
 protected:
 	// Called when the game starts or when spawned

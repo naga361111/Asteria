@@ -62,13 +62,13 @@ void AAsteriaGameState::UnpostQuest(int32 QuestId)
 	OnQuestPullsChanged.Broadcast();
 }
 
-int32 AAsteriaGameState::GetQuest()
+int32 AAsteriaGameState::GetQuest(ERank CurrentNpcRank)
 {
 	if (QuestPulls.Num() == 0) return -1;
 
 	for (FQuest& Quest : QuestPulls)
 	{
-		if (Quest.bIsPosted && !Quest.bIsAccepted)
+		if (Quest.bIsPosted && !Quest.bIsAccepted && Quest.RecommendedRank <= CurrentNpcRank)
 		{
 			Quest.bIsAccepted = true;
 

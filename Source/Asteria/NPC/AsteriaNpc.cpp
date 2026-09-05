@@ -16,11 +16,17 @@ void AAsteriaNpc::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AAsteriaNpc, NpcLevel);
+	DOREPLIFETIME(AAsteriaNpc, NpcRank)
 }
 
 void AAsteriaNpc::OnRep_Level()
 {
 	GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Cyan, FString::Printf(TEXT("Lvl: %d"), NpcLevel));
+}
+
+void AAsteriaNpc::OnRep_Rank()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Green, FString::Printf(TEXT("Rnk: %d"), NpcRank));
 }
 
 // Called when the game starts or when spawned
