@@ -23,11 +23,11 @@ void USystemQuestTileViewWidget::RefreshTiles()
 	
 	TileView->ClearListItems();
 
-	if (QuestType == EQuestType::System)
+	if (QuestType == EQuestWidgetType::System)
 	{
 		for (const FQuest& Quest : SystemQuestsPull)
 		{
-			if (Quest.bIsPosted) continue;
+			if (Quest.QuestType != EQuestType::Generated) continue;
 
 			UQuestEntryObject* EntryObject = NewObject<UQuestEntryObject>(this);
 			EntryObject->Quest = Quest;
@@ -39,7 +39,7 @@ void USystemQuestTileViewWidget::RefreshTiles()
 	{
 		for (const FQuest& Quest : SystemQuestsPull)
 		{
-			if (!Quest.bIsPosted || Quest.bIsCleared) continue;
+			if (Quest.QuestType != EQuestType::Posted) continue;
 
 			UQuestEntryObject* EntryObject = NewObject<UQuestEntryObject>(this);
 			EntryObject->Quest = Quest;

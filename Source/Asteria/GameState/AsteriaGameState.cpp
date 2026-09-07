@@ -29,7 +29,7 @@ void AAsteriaGameState::BeginPlay()
 			const int32 LastIndex = StaticEnum<ERank>()->NumEnums() - 3; // -1: _MAX, -1: 인덱스 보정
 			ERank RandomRank = static_cast<ERank>(FMath::RandRange(0, LastIndex));
 			
-			FQuest Quest = {QuestIndex, false, false, false, RandomRank};
+			FQuest Quest = {QuestIndex, EQuestType::Generated, RandomRank};
 			QuestPulls.Add(Quest);
 
 			QuestIndex++;
@@ -45,7 +45,7 @@ void AAsteriaGameState::PostQuest(int32 QuestId)
 	FQuest* Found = QuestPulls.FindByPredicate([QuestId](const FQuest& Quest) { return Quest.QuestId == QuestId; });
 	if (Found != nullptr)
 	{
-		Found->bIsPosted = true;
+		Found->QuestType = EQuestType::Posted;
 	}
 	OnQuestPullsChanged.Broadcast();
 }
@@ -57,7 +57,7 @@ void AAsteriaGameState::UnpostQuest(int32 QuestId)
 	FQuest* Found = QuestPulls.FindByPredicate([QuestId](const FQuest& Quest) { return Quest.QuestId == QuestId; });
 	if (Found != nullptr)
 	{
-		Found->bIsPosted = false;
+		Found->QuestType = EQuestType::Generated;
 	}
 	OnQuestPullsChanged.Broadcast();
 }
@@ -68,9 +68,9 @@ int32 AAsteriaGameState::GetQuest(ERank CurrentNpcRank)
 
 	for (FQuest& Quest : QuestPulls)
 	{
-		if (Quest.bIsPosted && !Quest.bIsAccepted && Quest.RecommendedRank <= CurrentNpcRank)
+		if (Quest.QuestType == EQuestType::Posted && Quest.RecommendedRank <= CurrentNpcRank)
 		{
-			Quest.bIsAccepted = true;
+			Quest.QuestType = EQuestType::Accepted; // 추후 Npc의 선택과 유저의 확정 로직 분리
 
 			OnQuestPullsChanged.Broadcast();
 			return Quest.QuestId;
@@ -88,9 +88,7 @@ void AAsteriaGameState::ClearQuest(int32 QuestId)
 	FQuest* Found = QuestPulls.FindByPredicate([QuestId](const FQuest& Quest) { return Quest.QuestId == QuestId; });
 	if (Found != nullptr)
 	{
-		Found->bIsCleared = true;
-		
-		UE_LOG(LogTemp, Warning, TEXT("%d has %d"), QuestId, Found->bIsCleared);
+		Found->QuestType = EQuestType::Cleared;
 	}
 	
 	OnQuestPullsChanged.Broadcast();

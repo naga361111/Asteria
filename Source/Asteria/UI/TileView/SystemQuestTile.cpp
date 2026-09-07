@@ -24,7 +24,7 @@ void USystemQuestTile::NativeConstruct()
 
 void USystemQuestTile::OnConfirmButtonClicked()
 {
-	if (Entry->QuestType == EQuestType::System)
+	if (Entry->QuestType == EQuestWidgetType::System)
 	{
 		GetOwningPlayerPawn<AAsteriaPlayer>()->Server_PostQuest(Entry->Quest.QuestId);
 	}

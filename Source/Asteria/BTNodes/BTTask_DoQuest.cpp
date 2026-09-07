@@ -24,7 +24,7 @@ EBTNodeResult::Type UBTTask_DoQuest::ExecuteTask(UBehaviorTreeComponent& OwnerCo
 			return Quest.QuestId == QuestId;
 		});
 
-		if (FoundedQuest != nullptr && !FoundedQuest->bIsCleared)
+		if (FoundedQuest != nullptr && FoundedQuest->QuestType == EQuestType::Accepted)
 		{
 			SelectedQuest = QuestId;
 			break;

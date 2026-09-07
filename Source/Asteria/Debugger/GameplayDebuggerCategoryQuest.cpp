@@ -35,7 +35,7 @@ void FGameplayDebuggerCategoryQuest::DrawData(APlayerController* OwnerPC, FGamep
 	int32 PostedQuestCount = 0;
 	for (FQuest Quest : GameState->QuestPulls)
 	{
-		if (Quest.bIsPosted) PostedQuestCount++;
+		if (Quest.QuestType == EQuestType::Posted) PostedQuestCount++;
 	}
 	CanvasContext.Printf(TEXT("{yellow}generated quest pulls: {white}%d"), GameState->QuestPulls.Num());
 	CanvasContext.Printf(TEXT("{yellow}posted quest pulls: {white}%d"), PostedQuestCount);

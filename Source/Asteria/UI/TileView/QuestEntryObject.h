@@ -21,5 +21,5 @@ public:
 	FQuest Quest;
 	
 	UPROPERTY()
-	EQuestType QuestType;
+	EQuestWidgetType QuestType;
 };

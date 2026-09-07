@@ -7,7 +7,7 @@
 #include "SystemQuestTileViewWidget.generated.h"
 
 UENUM(BlueprintType)
-enum class EQuestType : uint8
+enum class EQuestWidgetType : uint8
 {
 	System,
 	Post,
@@ -29,7 +29,7 @@ class ASTERIA_API USystemQuestTileViewWidget : public UUserWidget
 	
 public:
 	UPROPERTY(EditDefaultsOnly, Category="Quest")
-	EQuestType QuestType;
+	EQuestWidgetType QuestType;
 	
 	void RefreshTiles();
 };
