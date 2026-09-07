@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "BTNodes/BTTask_GetQuest.h"
+#include "BTNodes/BTTask_SelectQuest.h"
 
 #include "AIController.h"
 #include "GameState/AsteriaGameState.h"
@@ -14,7 +14,7 @@ EBTNodeResult::Type UBTTask_GetQuest::ExecuteTask(UBehaviorTreeComponent& OwnerC
 	
 	if (AGS == nullptr || OwnerNpc == nullptr) return EBTNodeResult::Failed;
 	
-	int32 QuestId = AGS->GetQuest(OwnerNpc->NpcRank);
+	int32 QuestId = AGS->SelectQuest(OwnerNpc->NpcRank);
 	if (QuestId == -1)
 	{
 		return EBTNodeResult::Failed;   // 잡을 퀘스트 없음 → BT에서 다른 행동으로

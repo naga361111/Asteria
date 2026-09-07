@@ -69,7 +69,7 @@ void AAsteriaGameState::UnpostQuest(int32 QuestId)
 	OnQuestPullsChanged.Broadcast();
 }
 
-int32 AAsteriaGameState::GetQuest(ERank CurrentNpcRank)
+int32 AAsteriaGameState::SelectQuest(ERank CurrentNpcRank)
 {
 	if (QuestPulls.Num() == 0) return -1;
 
@@ -77,7 +77,7 @@ int32 AAsteriaGameState::GetQuest(ERank CurrentNpcRank)
 	{
 		if (Quest.QuestType == EQuestType::Posted && Quest.RecommendedRank <= CurrentNpcRank)
 		{
-			Quest.QuestType = EQuestType::Accepted; // 추후 Npc의 선택과 유저의 확정 로직 분리
+			Quest.QuestType = EQuestType::Selected;
 
 			OnQuestPullsChanged.Broadcast();
 			return Quest.QuestId;

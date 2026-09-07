@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "BehaviorTree/BTTaskNode.h"
-#include "BTTask_GetQuest.generated.h"
+#include "BTTask_SelectQuest.generated.h"
 
 /**
  * 

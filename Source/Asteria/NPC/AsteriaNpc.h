@@ -8,6 +8,8 @@
 #include "GameFramework/Character.h"
 #include "AsteriaNpc.generated.h"
 
+DECLARE_MULTICAST_DELEGATE(FOnQuestAccepted)
+
 UCLASS()
 class ASTERIA_API AAsteriaNpc : public ACharacter
 {
@@ -39,6 +41,8 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, Category="Npc")
 	TObjectPtr<URequiredRankUpData> RequiredRankUpData;
+	
+	FOnQuestAccepted OnQuestAccepted;
 
 protected:
 	// Called when the game starts or when spawned
@@ -50,6 +54,9 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	
+	UPROPERTY(VisibleAnywhere, Category="Quest")
+	TArray<int32> SelectedQuests;
 	
 	UPROPERTY(VisibleAnywhere, Category= "Quest")
 	TArray<int32> AcceptedQuests;

@@ -59,6 +59,9 @@ void ANpcAIController::OnPossess(APawn* InPawn)
 
 	TArray<AActor*> NpcHomeActor;
 	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("NpcHome"), NpcHomeActor);
+	
+	TArray<AActor*> GuildCounterActor;
+	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("GuildCounter"), GuildCounterActor);
 
 	if (BehaviorTree != nullptr)
 	{
@@ -72,6 +75,11 @@ void ANpcAIController::OnPossess(APawn* InPawn)
 		if (NpcHomeActor.Num() != 0)
 		{
 			GetBlackboardComponent()->SetValueAsObject(FName("NpcHome"), NpcHomeActor[0]);
+		}
+		
+		if (GuildCounterActor.Num() != 0)
+		{
+			GetBlackboardComponent()->SetValueAsObject(FName("GuildCounter"), GuildCounterActor[0]);
 		}
 	}
 }

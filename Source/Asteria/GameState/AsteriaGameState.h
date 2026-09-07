@@ -39,7 +39,7 @@ public:
 	FOnQuestPullsChanged OnQuestPullsChanged;
 	FOnGuildMoneyChanged OnGuildMoneyChanged;
 	
-	int32 GetQuest(ERank CurrentNpcRank); 
+	int32 SelectQuest(ERank CurrentNpcRank); 
 	
 	void ClearQuest(int32 QuestId);
 	
