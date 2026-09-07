@@ -54,7 +54,15 @@ public:
 	UPROPERTY(VisibleAnywhere, Category= "Quest")
 	TArray<int32> AcceptedQuests;
 	
-	void QuestCleared(ERank ClearedQuestRank);
+	void QuestCleared(ERank ClearedQuestRank, int32 Reward);
 	void NpcLevelUp();
 	void NpcRankUp();
+	
+	UPROPERTY(EditDefaultsOnly, Category="Quest")
+	float FeeRate = 0.2f;
+	
+	UPROPERTY(VisibleAnywhere, Category="Npc")
+	int32 NpcMoney;
+	
+	void SettleQuestReward(int32 Reward);
 };

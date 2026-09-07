@@ -7,6 +7,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/Character.h"
+#include "UI/HUD/GuildMoneyWidget.h"
 #include "AsteriaPlayer.generated.h"
 
 struct FInputActionValue;
@@ -73,4 +74,7 @@ public:
 	
 	UFUNCTION(Server, Reliable)
 	void Server_UnpostQuest(int32 QuestId);
+	
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UGuildMoneyWidget> GuildMoneyWidgetClass;
 };

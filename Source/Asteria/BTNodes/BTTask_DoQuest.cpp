@@ -39,7 +39,7 @@ EBTNodeResult::Type UBTTask_DoQuest::ExecuteTask(UBehaviorTreeComponent& OwnerCo
 		FTimerDelegate::CreateLambda([this, &OwnerComp, AGS, SelectedQuest, OwnerNpc, FoundedQuest]()
 		{
 			AGS->ClearQuest(SelectedQuest);
-			OwnerNpc->QuestCleared(FoundedQuest->RecommendedRank);
+			OwnerNpc->QuestCleared(FoundedQuest->RecommendedRank, FoundedQuest->Reward);
 
 			FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 		}),

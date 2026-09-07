@@ -2,6 +2,8 @@
 
 
 #include "NPC/AsteriaNpc.h"
+
+#include "GameState/AsteriaGameState.h"
 #include "Net/UnrealNetwork.h"
 
 // Sets default values
@@ -54,8 +56,10 @@ void AAsteriaNpc::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 }
 
-void AAsteriaNpc::QuestCleared(ERank ClearedQuestRank)
+void AAsteriaNpc::QuestCleared(ERank ClearedQuestRank, int32 Reward)
 {
+	SettleQuestReward(Reward);
+
 	if (NpcRank == ClearedQuestRank) ClearedCurrentRankQuestCount++;
 
 	NpcLevelUp();
@@ -81,4 +85,15 @@ void AAsteriaNpc::NpcRankUp()
 
 	NpcRank = static_cast<ERank>(static_cast<uint8>(NpcRank) + 1);
 	ClearedCurrentRankQuestCount = 0;
+}
+
+void AAsteriaNpc::SettleQuestReward(int32 Reward)
+{
+	AAsteriaGameState* AGS = GetWorld()->GetGameState<AAsteriaGameState>();
+
+	if (AGS != nullptr)
+	{
+		AGS->AddGuildMoney(Reward * FeeRate);
+		NpcMoney += Reward * (1 - FeeRate);
+	}
 }

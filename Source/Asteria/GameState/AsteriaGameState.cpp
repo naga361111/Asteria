@@ -10,11 +10,17 @@ void AAsteriaGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AAsteriaGameState, QuestPulls)
+	DOREPLIFETIME(AAsteriaGameState, GuildMoney)
 }
 
 void AAsteriaGameState::OnRep_QuestPulls()
 {
 	OnQuestPullsChanged.Broadcast();
+}
+
+void AAsteriaGameState::OnRep_GuildBank()
+{
+	OnGuildMoneyChanged.Broadcast(GuildMoney);
 }
 
 void AAsteriaGameState::BeginPlay()
@@ -28,8 +34,9 @@ void AAsteriaGameState::BeginPlay()
 		{
 			const int32 LastIndex = StaticEnum<ERank>()->NumEnums() - 3; // -1: _MAX, -1: 인덱스 보정
 			ERank RandomRank = static_cast<ERank>(FMath::RandRange(0, LastIndex));
-			
-			FQuest Quest = {QuestIndex, EQuestType::Generated, RandomRank};
+			int32 RandomRewardAmount = FMath::RandRange(10, 100);
+
+			FQuest Quest = {QuestIndex, EQuestType::Generated, RandomRank, RandomRewardAmount};
 			QuestPulls.Add(Quest);
 
 			QuestIndex++;
@@ -90,6 +97,15 @@ void AAsteriaGameState::ClearQuest(int32 QuestId)
 	{
 		Found->QuestType = EQuestType::Cleared;
 	}
-	
+
 	OnQuestPullsChanged.Broadcast();
+}
+
+void AAsteriaGameState::AddGuildMoney(int32 Amount)
+{
+	if (!HasAuthority()) return;
+
+	GuildMoney += Amount;
+	
+	OnGuildMoneyChanged.Broadcast(GuildMoney);
 }

@@ -27,4 +27,7 @@ struct FQuest
 	
 	UPROPERTY(VisibleAnywhere)
 	ERank RecommendedRank;
+	
+	UPROPERTY(VisibleAnywhere)
+	int32 Reward;
 };

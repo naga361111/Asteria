@@ -75,6 +75,14 @@ void AAsteriaPlayer::BeginPlay()
 			}
 		}
 	}
+	
+	if (IsLocallyControlled())
+	{
+		if (UGuildMoneyWidget* Widget = CreateWidget<UGuildMoneyWidget>(GetWorld(), GuildMoneyWidgetClass))
+		{
+			Widget->AddToViewport();
+		}
+	}
 
 	// --- 델리게이트 바인딩 ---
 	// AddDynamic(수신 객체, &클래스::핸들러). 핸들러는 위에서 선언한 UFUNCTION들.
