@@ -19,6 +19,6 @@ EBTNodeResult::Type UBTTask_GetQuest::ExecuteTask(UBehaviorTreeComponent& OwnerC
 	{
 		return EBTNodeResult::Failed;   // 잡을 퀘스트 없음 → BT에서 다른 행동으로
 	}
-	OwnerNpc->AcceptedQuests.Add(QuestId);
+	OwnerNpc->SelectedQuests.Add(QuestId);
 	return EBTNodeResult::Succeeded;
 }

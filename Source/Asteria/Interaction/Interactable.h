@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
+#include "Player/AsteriaPlayer.h"
 #include "Interactable.generated.h"
 
 // This class does not need to be modified.
@@ -16,4 +17,8 @@ class UInteractable : public UInterface
 class ASTERIA_API IInteractable
 {
 	GENERATED_BODY()
+	
+public:
+	virtual bool CanInteract() const = 0;
+	virtual void OnInteract(AAsteriaPlayer* Interactor) = 0;
 };

@@ -97,3 +97,17 @@ void AAsteriaNpc::SettleQuestReward(int32 Reward)
 		NpcMoney += Reward * (1 - FeeRate);
 	}
 }
+
+bool AAsteriaNpc::CanInteract() const
+{
+	return bWaitForQuestAccepted;
+}
+
+void AAsteriaNpc::OnInteract(AAsteriaPlayer* Interactor)
+{
+	for (int32 Element : SelectedQuests)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%d"), Element);
+	}
+	
+}

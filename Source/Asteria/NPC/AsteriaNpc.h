@@ -6,12 +6,13 @@
 #include "Common/Rank.h"
 #include "Common/RequiredRankUpData.h"
 #include "GameFramework/Character.h"
+#include "Interaction/Interactable.h"
 #include "AsteriaNpc.generated.h"
 
 DECLARE_MULTICAST_DELEGATE(FOnQuestAccepted)
 
 UCLASS()
-class ASTERIA_API AAsteriaNpc : public ACharacter
+class ASTERIA_API AAsteriaNpc : public ACharacter, public IInteractable
 {
 	GENERATED_BODY()
 
@@ -43,6 +44,9 @@ public:
 	TObjectPtr<URequiredRankUpData> RequiredRankUpData;
 	
 	FOnQuestAccepted OnQuestAccepted;
+	
+	virtual bool CanInteract() const override;
+	virtual void OnInteract(AAsteriaPlayer* Interactor) override;
 
 protected:
 	// Called when the game starts or when spawned
@@ -72,4 +76,7 @@ public:
 	int32 NpcMoney;
 	
 	void SettleQuestReward(int32 Reward);
+	
+	UPROPERTY(VisibleAnywhere, Category="Quest")
+	bool bWaitForQuestAccepted;
 };

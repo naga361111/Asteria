@@ -37,7 +37,7 @@ void AAsteriaPlayer::OnDetectionBeginOverlap(UPrimitiveComponent* OverlappedComp
                                              const FHitResult& SweepResult)
 {
 	if (!IsLocallyControlled()) return;
-	
+
 	if (OtherActor != nullptr && OtherActor != this && OtherActor->Implements<UInteractable>())
 	{
 		OverlappedActor = OtherActor;
@@ -48,11 +48,11 @@ void AAsteriaPlayer::OnDetectionEndOverlap(UPrimitiveComponent* OverlappedComp, 
                                            UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	if (!IsLocallyControlled()) return;
-	
+
 	if (OtherActor == OverlappedActor)
 	{
 		OverlappedActor = nullptr;
-		
+
 		APlayerController* PC = GetController<APlayerController>();
 		PC->bShowMouseCursor = false;
 		PC->SetInputMode(FInputModeGameOnly());
@@ -75,7 +75,7 @@ void AAsteriaPlayer::BeginPlay()
 			}
 		}
 	}
-	
+
 	if (IsLocallyControlled())
 	{
 		if (UGuildMoneyWidget* Widget = CreateWidget<UGuildMoneyWidget>(GetWorld(), GuildMoneyWidgetClass))
@@ -114,21 +114,12 @@ void AAsteriaPlayer::Look(const FInputActionValue& Value)
 
 void AAsteriaPlayer::Interact(const FInputActionValue& Value)
 {
-	if (!IsLocallyControlled()) return;
+	if (!IsLocallyControlled() || !OverlappedActor.IsValid()) return;
+
+	IInteractable* Target = Cast<IInteractable>(OverlappedActor.Get());
+	if (Target && Target->CanInteract())
+		Target->OnInteract(this);
 	
-	if (OverlappedActor.IsValid())
-	{
-		APlayerController* PC = GetController<APlayerController>();
-		if (!PC->bShowMouseCursor)
-		{
-			PC->bShowMouseCursor = true;
-			PC->SetInputMode(FInputModeGameAndUI());
-		} else
-		{
-			PC->bShowMouseCursor = false;
-			PC->SetInputMode(FInputModeGameOnly());
-		}
-	}
 }
 
 // Called to bind functionality to input
@@ -152,5 +143,4 @@ void AAsteriaPlayer::Server_PostQuest_Implementation(int32 QuestId)
 void AAsteriaPlayer::Server_UnpostQuest_Implementation(int32 QuestId)
 {
 	GetWorld()->GetGameState<AAsteriaGameState>()->UnpostQuest(QuestId);
-
 }
