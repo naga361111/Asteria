@@ -4,8 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "Player/AsteriaPlayer.h"
 #include "Interactable.generated.h"
+
+class AAsteriaPlayer;
 
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI, BlueprintType)

@@ -69,6 +69,18 @@ void AAsteriaGameState::UnpostQuest(int32 QuestId)
 	OnQuestPullsChanged.Broadcast();
 }
 
+void AAsteriaGameState::AcceptQuest(TArray<int32> QuestId)
+{
+	if (!HasAuthority()) return;
+	
+	for (int32 Quest : QuestId)
+	{
+		QuestPulls[Quest].QuestType = EQuestType::Accepted;
+	}
+	
+	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Cyan, FString::Printf(TEXT("Success")));
+}
+
 int32 AAsteriaGameState::SelectQuest(ERank CurrentNpcRank)
 {
 	if (QuestPulls.Num() == 0) return -1;

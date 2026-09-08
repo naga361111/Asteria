@@ -36,6 +36,8 @@ public:
 	void PostQuest(int32 QuestId);
 	void UnpostQuest(int32 QuestId);
 	
+	void AcceptQuest(TArray<int32> QuestId);
+	
 	FOnQuestPullsChanged OnQuestPullsChanged;
 	FOnGuildMoneyChanged OnGuildMoneyChanged;
 	

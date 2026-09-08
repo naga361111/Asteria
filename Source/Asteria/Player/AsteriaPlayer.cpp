@@ -8,6 +8,7 @@
 #include "InputActionValue.h"
 #include "GameState/AsteriaGameState.h"
 #include "Interaction/Interactable.h"
+#include "NPC/AsteriaNpc.h"
 
 // Sets default values
 AAsteriaPlayer::AAsteriaPlayer()
@@ -143,4 +144,14 @@ void AAsteriaPlayer::Server_PostQuest_Implementation(int32 QuestId)
 void AAsteriaPlayer::Server_UnpostQuest_Implementation(int32 QuestId)
 {
 	GetWorld()->GetGameState<AAsteriaGameState>()->UnpostQuest(QuestId);
+}
+
+void AAsteriaPlayer::Server_AcceptQuest_Implementation(const TArray<int32>& QuestId, AAsteriaNpc* Npc)
+{
+	GetWorld()->GetGameState<AAsteriaGameState>()->AcceptQuest(QuestId);
+	
+	Npc->AcceptedQuests.Append(Npc->SelectedQuests);
+	Npc->SelectedQuests.Empty();
+	
+	Npc->OnQuestAccepted.Broadcast();
 }

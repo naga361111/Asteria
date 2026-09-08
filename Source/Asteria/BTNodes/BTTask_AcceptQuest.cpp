@@ -19,7 +19,6 @@ EBTNodeResult::Type UBTTask_AcceptQuest::ExecuteTask(UBehaviorTreeComponent& Own
 	Npc->OnQuestAccepted.AddUObject(this, &UBTTask_AcceptQuest::HandleQuestAccept);
 	Npc->bWaitForQuestAccepted = true;
 
-	UE_LOG(LogTemp, Warning, TEXT("InProgress"))
 	return EBTNodeResult::InProgress;
 }
 

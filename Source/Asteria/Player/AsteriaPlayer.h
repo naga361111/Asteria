@@ -10,6 +10,8 @@
 #include "UI/HUD/GuildMoneyWidget.h"
 #include "AsteriaPlayer.generated.h"
 
+class AAsteriaNpc;
+
 struct FInputActionValue;
 
 UCLASS()
@@ -74,6 +76,9 @@ public:
 	
 	UFUNCTION(Server, Reliable)
 	void Server_UnpostQuest(int32 QuestId);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_AcceptQuest(const TArray<int32>& QuestId, AAsteriaNpc* Npc);
 	
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UGuildMoneyWidget> GuildMoneyWidgetClass;

@@ -5,6 +5,7 @@
 
 #include "GameState/AsteriaGameState.h"
 #include "Net/UnrealNetwork.h"
+#include "Player/AsteriaPlayer.h"
 
 // Sets default values
 AAsteriaNpc::AAsteriaNpc()
@@ -107,8 +108,5 @@ bool AAsteriaNpc::CanInteract() const
 
 void AAsteriaNpc::OnInteract(AAsteriaPlayer* Interactor)
 {
-	for (int32 Element : SelectedQuests)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Cyan, FString::Printf(TEXT("%d"), Element));
-	}
+	Interactor->Server_AcceptQuest(SelectedQuests, this);
 }
