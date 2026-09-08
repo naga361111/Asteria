@@ -20,6 +20,8 @@ void AAsteriaNpc::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& Ou
 	DOREPLIFETIME(AAsteriaNpc, NpcLevel);
 	DOREPLIFETIME(AAsteriaNpc, NpcRank);
 	DOREPLIFETIME(AAsteriaNpc, ClearedCurrentRankQuestCount);
+	DOREPLIFETIME(AAsteriaNpc, SelectedQuests);
+	DOREPLIFETIME(AAsteriaNpc, bWaitForQuestAccepted);
 }
 
 void AAsteriaNpc::OnRep_Level()
@@ -107,7 +109,6 @@ void AAsteriaNpc::OnInteract(AAsteriaPlayer* Interactor)
 {
 	for (int32 Element : SelectedQuests)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%d"), Element);
+		GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Cyan, FString::Printf(TEXT("%d"), Element));
 	}
-	
 }
