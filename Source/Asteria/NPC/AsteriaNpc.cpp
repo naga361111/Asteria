@@ -3,42 +3,11 @@
 
 #include "NPC/AsteriaNpc.h"
 
-#include "GameState/AsteriaGameState.h"
-#include "Net/UnrealNetwork.h"
-#include "Player/AsteriaPlayer.h"
-
 // Sets default values
 AAsteriaNpc::AAsteriaNpc()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-}
-
-void AAsteriaNpc::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(AAsteriaNpc, NpcLevel);
-	DOREPLIFETIME(AAsteriaNpc, NpcRank);
-	DOREPLIFETIME(AAsteriaNpc, ClearedCurrentRankQuestCount);
-	DOREPLIFETIME(AAsteriaNpc, SelectedQuests);
-	DOREPLIFETIME(AAsteriaNpc, bWaitForQuestAccepted);
-}
-
-void AAsteriaNpc::OnRep_Level()
-{
-	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Cyan, FString::Printf(TEXT("Lvl: %d"), NpcLevel));
-}
-
-void AAsteriaNpc::OnRep_Rank()
-{
-	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, FString::Printf(TEXT("Rnk: %d"), NpcRank));
-}
-
-void AAsteriaNpc::OnRep_CurrentClearedQuest()
-{
-	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green,
-	                                 FString::Printf(TEXT("Cld: %d"), ClearedCurrentRankQuestCount));
 }
 
 // Called when the game starts or when spawned
@@ -57,56 +26,4 @@ void AAsteriaNpc::Tick(float DeltaTime)
 void AAsteriaNpc::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-}
-
-void AAsteriaNpc::QuestCleared(ERank ClearedQuestRank, int32 Reward)
-{
-	SettleQuestReward(Reward);
-
-	if (NpcRank == ClearedQuestRank) ClearedCurrentRankQuestCount++;
-
-	NpcLevelUp();
-	NpcRankUp();
-}
-
-void AAsteriaNpc::NpcLevelUp()
-{
-	NpcLevel++;
-}
-
-void AAsteriaNpc::NpcRankUp()
-{
-	if (static_cast<uint8>(NpcRank) >= static_cast<uint8>(ERank::Count) - 1)
-		return;
-
-	if (!RequiredRankUpData) return;
-
-	const int32* Required = RequiredRankUpData->RequiredClears.Find(NpcRank);
-	if (!Required) return;
-
-	if (ClearedCurrentRankQuestCount < *Required) return;
-
-	NpcRank = static_cast<ERank>(static_cast<uint8>(NpcRank) + 1);
-	ClearedCurrentRankQuestCount = 0;
-}
-
-void AAsteriaNpc::SettleQuestReward(int32 Reward)
-{
-	AAsteriaGameState* AGS = GetWorld()->GetGameState<AAsteriaGameState>();
-
-	if (AGS != nullptr)
-	{
-		AGS->AddGuildMoney(Reward * FeeRate);
-		NpcMoney += Reward * (1 - FeeRate);
-	}
-}
-
-bool AAsteriaNpc::CanInteract() const
-{
-	return bWaitForQuestAccepted;
-}
-
-void AAsteriaNpc::OnInteract(AAsteriaPlayer* Interactor)
-{
-	Interactor->Server_AcceptQuest(SelectedQuests, this);
 }

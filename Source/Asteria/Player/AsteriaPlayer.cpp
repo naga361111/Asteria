@@ -6,9 +6,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
-#include "GameState/AsteriaGameState.h"
 #include "Interaction/Interactable.h"
-#include "NPC/AsteriaNpc.h"
 
 // Sets default values
 AAsteriaPlayer::AAsteriaPlayer()
@@ -77,14 +75,6 @@ void AAsteriaPlayer::BeginPlay()
 		}
 	}
 
-	if (IsLocallyControlled())
-	{
-		if (UGuildMoneyWidget* Widget = CreateWidget<UGuildMoneyWidget>(GetWorld(), GuildMoneyWidgetClass))
-		{
-			Widget->AddToViewport();
-		}
-	}
-
 	// --- 델리게이트 바인딩 ---
 	// AddDynamic(수신 객체, &클래스::핸들러). 핸들러는 위에서 선언한 UFUNCTION들.
 	BoxComp->OnComponentBeginOverlap.AddDynamic(this, &AAsteriaPlayer::OnDetectionBeginOverlap);
@@ -134,24 +124,4 @@ void AAsteriaPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		EIC->BindAction(LookAction, ETriggerEvent::Triggered, this, &AAsteriaPlayer::Look);
 		EIC->BindAction(InteractAction, ETriggerEvent::Started, this, &AAsteriaPlayer::Interact);
 	}
-}
-
-void AAsteriaPlayer::Server_PostQuest_Implementation(int32 QuestId)
-{
-	GetWorld()->GetGameState<AAsteriaGameState>()->PostQuest(QuestId);
-}
-
-void AAsteriaPlayer::Server_UnpostQuest_Implementation(int32 QuestId)
-{
-	GetWorld()->GetGameState<AAsteriaGameState>()->UnpostQuest(QuestId);
-}
-
-void AAsteriaPlayer::Server_AcceptQuest_Implementation(const TArray<int32>& QuestId, AAsteriaNpc* Npc)
-{
-	GetWorld()->GetGameState<AAsteriaGameState>()->AcceptQuest(QuestId);
-	
-	Npc->AcceptedQuests.Append(Npc->SelectedQuests);
-	Npc->SelectedQuests.Empty();
-	
-	Npc->OnQuestAccepted.Broadcast();
 }

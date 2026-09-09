@@ -3,11 +3,9 @@
 
 #include "NPC/NpcAIController.h"
 
-#include "AsteriaNpc.h"
-#include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Kismet/GameplayStatics.h"
 #include "Navigation/PathFollowingComponent.h"
+#include "GameFramework/Character.h"
 
 ANpcAIController::ANpcAIController()
 {
@@ -54,32 +52,8 @@ void ANpcAIController::OnPossess(APawn* InPawn)
 		}
 	}
 
-	TArray<AActor*> PostQuestBoardActor;
-	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("PostQuestBoard"), PostQuestBoardActor);
-
-	TArray<AActor*> NpcHomeActor;
-	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("NpcHome"), NpcHomeActor);
-	
-	TArray<AActor*> GuildCounterActor;
-	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("GuildCounter"), GuildCounterActor);
-
 	if (BehaviorTree != nullptr)
 	{
 		RunBehaviorTree(BehaviorTree);
-
-		if (PostQuestBoardActor.Num() != 0)
-		{
-			GetBlackboardComponent()->SetValueAsObject(FName("PostQuestBoard"), PostQuestBoardActor[0]);
-		}
-
-		if (NpcHomeActor.Num() != 0)
-		{
-			GetBlackboardComponent()->SetValueAsObject(FName("NpcHome"), NpcHomeActor[0]);
-		}
-		
-		if (GuildCounterActor.Num() != 0)
-		{
-			GetBlackboardComponent()->SetValueAsObject(FName("GuildCounter"), GuildCounterActor[0]);
-		}
 	}
 }
