@@ -1,6 +1,5 @@
 - [Script folder organization](script-folder-organization.md) — 소스는 항상 폴더로 그룹화, 모듈 루트에 flat 금지
 - [Project direction](project-direction-guild-sim.md) — 코옵 모험가 길드 홀 시뮬(A형)로 스코프 축소 확정, 던전 추상·회색박스 코어부터
 - [Quest rank system](quest-rank-system.md) — 퀘스트 랭크 F~S 7단계 알파벳 확정, 인덱스 기반 난이도/보상 커브, 서버 소유 후 클라 동기화
-- [Todo list](todoList.md) — 프로토타입 두 스트림(재화 루프/NPC 승인 플로우), 이후 과제, 서버-호스트 동기화 전제
-- [Player currency loop](player-currency-loop.md) — 재화 earn→spend 루프 남은 작업 + 미확정 결정(지갑소유·보상파생·소모처)
-- [NPC quest approval flow](npc-quest-approval-flow.md) — NPC 제안→플레이어 승인/확정 게이트 2개, 상태 enum 승격 등 미확정 결정
+- [Quest/NPC architecture](quest-npc-architecture.md) — 재설계 확정: 퀘스트 상태 기계가 단일 지휘자, 전이는 QuestService 한 곳, NPC는 퀘스트 무소유·이벤트 반응
+- [Todo list](todoList.md) — 클린 슬레이트 완료(구 구현 전부 삭제), 새 아키텍처대로 QuestService부터 재구현
