@@ -33,7 +33,7 @@ EBTNodeResult::Type UBTTask_FaceDestination::ExecuteTask(UBehaviorTreeComponent&
 	AAIController* Controller = OwnerComp.GetAIOwner();
 	APawn* Pawn = Controller ? Controller->GetPawn() : nullptr;
 	UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();
-	if (Controller == nullptr || Pawn == nullptr || BB == nullptr)
+	if (Pawn == nullptr || BB == nullptr)
 	{
 		return EBTNodeResult::Failed;
 	}
@@ -44,17 +44,14 @@ EBTNodeResult::Type UBTTask_FaceDestination::ExecuteTask(UBehaviorTreeComponent&
 		return EBTNodeResult::Failed;
 	}
 
-	FBTFaceDestinationMemory* Memory = reinterpret_cast<FBTFaceDestinationMemory*>(NodeMemory);
-	Memory->DesiredYaw = Dest->GetActorRotation().Yaw;
-
-	// 즉시 스냅 모드.
+	// 즉시 스냅 모드: 목적지 yaw로 바로 맞추고 성공.
 	if (InterpSpeed <= 0.0f)
 	{
-		ApplyYaw(Controller, Pawn, Memory->DesiredYaw);
+		Pawn->SetActorRotation(FRotator(0.0f, Dest->GetActorRotation().Yaw, 0.0f));
 		return EBTNodeResult::Succeeded;
 	}
 
-	// 보간 모드: TickTask에서 목표각까지 회전시킨다.
+	// 보간 모드: TickTask에서 목표각까지 회전시킨다. 목적지는 정적이므로 매 틱 다시 읽는다.
 	return EBTNodeResult::InProgress;
 }
 
@@ -62,34 +59,23 @@ void UBTTask_FaceDestination::TickTask(UBehaviorTreeComponent& OwnerComp, uint8*
 {
 	AAIController* Controller = OwnerComp.GetAIOwner();
 	APawn* Pawn = Controller ? Controller->GetPawn() : nullptr;
-	if (Controller == nullptr || Pawn == nullptr)
+	UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();
+	AActor* Dest = BB ? Cast<AActor>(BB->GetValueAsObject(TargetKey.SelectedKeyName)) : nullptr;
+	if (Pawn == nullptr || Dest == nullptr)
 	{
 		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
 		return;
 	}
 
-	FBTFaceDestinationMemory* Memory = reinterpret_cast<FBTFaceDestinationMemory*>(NodeMemory);
-
+	const float DesiredYaw = Dest->GetActorRotation().Yaw;
 	const FRotator Current = Pawn->GetActorRotation();
-	const FRotator Target(0.0f, Memory->DesiredYaw, 0.0f);
-	const FRotator NewRot = FMath::RInterpTo(Current, Target, DeltaSeconds, InterpSpeed);
-
-	ApplyYaw(Controller, Pawn, NewRot.Yaw);
+	const FRotator NewRot = FMath::RInterpTo(Current, FRotator(0.0f, DesiredYaw, 0.0f), DeltaSeconds, InterpSpeed);
+	Pawn->SetActorRotation(NewRot);
 
 	// 목표각 허용 범위 안이면 스냅으로 마무리하고 성공.
-	if (FMath::Abs(FMath::FindDeltaAngleDegrees(NewRot.Yaw, Memory->DesiredYaw)) <= AngleTolerance)
+	if (FMath::Abs(FMath::FindDeltaAngleDegrees(NewRot.Yaw, DesiredYaw)) <= AngleTolerance)
 	{
-		ApplyYaw(Controller, Pawn, Memory->DesiredYaw);
+		Pawn->SetActorRotation(FRotator(0.0f, DesiredYaw, 0.0f));
 		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 	}
-}
-
-void UBTTask_FaceDestination::ApplyYaw(AAIController* Controller, APawn* Pawn, float Yaw)
-{
-	const FRotator YawRot(0.0f, Yaw, 0.0f);
-
-	// bOrientRotationToMovement 모드: 폰 액터 회전이 권위(정지 상태라 유지됨).
-	Pawn->SetActorRotation(YawRot);
-	// bUseControllerRotationYaw 모드: 컨트롤 회전이 매 틱 폰을 덮으므로 함께 맞춘다.
-	Controller->SetControlRotation(YawRot);
 }
