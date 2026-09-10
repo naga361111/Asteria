@@ -18,12 +18,17 @@ class ASTERIA_API AAsteriaGameState : public AGameStateBase
 	GENERATED_BODY()
 
 	AAsteriaGameState();
+	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	int32 QuestCount = 0;
 
 public:
-	UPROPERTY(VisibleAnywhere, Category="Quest")
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_QuestPull,Category="Quest")
 	TArray<FQuest> QuestPull;
+	
+	UFUNCTION()
+	void OnRep_QuestPull();
 
 	// QuestPull이 바뀌면 이걸 Broadcast (호출자 책임)
 	FOnQuestPullChanged OnQuestPullChanged;

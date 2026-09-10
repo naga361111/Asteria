@@ -3,6 +3,8 @@
 
 #include "GameState/AsteriaGameState.h"
 
+#include "Net/UnrealNetwork.h"
+
 AAsteriaGameState::AAsteriaGameState()
 {
 	for (int i = 0; i < 50; ++i)
@@ -12,4 +14,14 @@ AAsteriaGameState::AAsteriaGameState()
 		
 		QuestCount++;
 	}
+}
+
+void AAsteriaGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	DOREPLIFETIME(AAsteriaGameState, QuestPull);
+}
+
+void AAsteriaGameState::OnRep_QuestPull()
+{
+	OnQuestPullChanged.Broadcast();
 }
