@@ -16,10 +16,10 @@ USTRUCT()
 struct FQuest
 {
 	GENERATED_BODY()
-	
+
 	UPROPERTY(VisibleAnywhere)
 	int32 QuestId;
-	
+
 	UPROPERTY(VisibleAnywhere)
 	EQuest QuestType;
 };

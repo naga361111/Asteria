@@ -7,6 +7,8 @@
 #include "Common/Quest.h"
 #include "AsteriaGameState.generated.h"
 
+DECLARE_MULTICAST_DELEGATE(FOnQuestPullChanged);
+
 /**
  *
  */
@@ -14,12 +16,15 @@ UCLASS()
 class ASTERIA_API AAsteriaGameState : public AGameStateBase
 {
 	GENERATED_BODY()
-	
+
 	AAsteriaGameState();
-	
+
 	int32 QuestCount = 0;
-	
+
 public:
 	UPROPERTY(VisibleAnywhere, Category="Quest")
 	TArray<FQuest> QuestPull;
+
+	// QuestPull이 바뀌면 이걸 Broadcast (호출자 책임)
+	FOnQuestPullChanged OnQuestPullChanged;
 };
