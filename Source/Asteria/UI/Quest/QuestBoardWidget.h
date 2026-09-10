@@ -17,14 +17,10 @@ class ASTERIA_API UQuestBoardWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
-public:
-	// QuestPull(struct 배열)을 받아 TileView 갱신
-	void SetQuests(const TArray<FQuest>& Quests);
-
 protected:
 	virtual void NativeConstruct() override;
 
-	// GameState의 QuestPull을 읽어 다시 그림 (bind 대상 + 초기 prime)
+	// QuestService의 QuestPull을 읽어 TileView를 다시 그림 (bind 대상 + 초기 prime)
 	void RefreshQuests();
 
 	// WBP의 TileView와 이름 일치시킬 것

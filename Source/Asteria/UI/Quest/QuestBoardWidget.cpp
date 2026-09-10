@@ -5,6 +5,7 @@
 #include "QuestEntryObject.h"
 #include "Components/TileView.h"
 #include "GameState/AsteriaGameState.h"
+#include "GameState/Components/QuestService.h"
 
 void UQuestBoardWidget::NativeConstruct()
 {
@@ -12,28 +13,29 @@ void UQuestBoardWidget::NativeConstruct()
 
 	if (AAsteriaGameState* GS = GetWorld()->GetGameState<AAsteriaGameState>())
 	{
-		GS->OnQuestPullChanged.AddUObject(this, &UQuestBoardWidget::RefreshQuests);
-		RefreshQuests();
+		if (UQuestService* Service = GS->QuestService)
+		{
+			Service->OnQuestPullChanged.AddUObject(this, &UQuestBoardWidget::RefreshQuests);
+			RefreshQuests();
+		}
 	}
 }
 
 void UQuestBoardWidget::RefreshQuests()
-{
-	if (AAsteriaGameState* GS = GetWorld()->GetGameState<AAsteriaGameState>())
-	{
-		SetQuests(GS->QuestPull);
-	}
-}
-
-void UQuestBoardWidget::SetQuests(const TArray<FQuest>& Quests)
 {
 	if (!QuestTileView)
 	{
 		return;
 	}
 
+	AAsteriaGameState* GS = GetWorld()->GetGameState<AAsteriaGameState>();
+	if (!GS || !GS->QuestService)
+	{
+		return;
+	}
+
 	QuestTileView->ClearListItems();
-	for (const FQuest& Quest : Quests)
+	for (const FQuest& Quest : GS->QuestService->QuestPull)
 	{
 		UQuestEntryObject* Entry = NewObject<UQuestEntryObject>(this);
 		Entry->Quest = Quest;
