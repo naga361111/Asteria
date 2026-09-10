@@ -3,3 +3,4 @@
 - [Quest rank system](quest-rank-system.md) — 퀘스트 랭크 F~S 7단계 알파벳 확정, 인덱스 기반 난이도/보상 커브, 서버 소유 후 클라 동기화
 - [Quest/NPC architecture](quest-npc-architecture.md) — 재설계 확정: 퀘스트 상태 기계가 단일 지휘자, 전이는 QuestService 한 곳, NPC는 퀘스트 무소유·이벤트 반응
 - [Todo list](todoList.md) — 클린 슬레이트 완료(구 구현 전부 삭제), 새 아키텍처대로 QuestService부터 재구현
+- [Hearthvale kit & structure PCG](hearthvale-modular-kit-pcg.md) — 그리드 300/층고 300/Tavern_D 확정(개구부·계단이 구속조건), PCG_BuildingShell 셸 제너레이터와 소유 경계
