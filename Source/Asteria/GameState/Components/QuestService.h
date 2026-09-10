@@ -8,6 +8,7 @@
 #include "QuestService.generated.h"
 
 DECLARE_MULTICAST_DELEGATE(FOnQuestPullChanged);
+DECLARE_MULTICAST_DELEGATE(FOnAssignmentsChanged);
 
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -16,6 +17,7 @@ class ASTERIA_API UQuestService : public UActorComponent
 	GENERATED_BODY()
 
 	int32 QuestCount = 0;
+	int32 AssignmentCount = 0;
 
 public:
 	// Sets default values for this component's properties
@@ -31,4 +33,17 @@ public:
 
 	// QuestPull이 바뀌면 이걸 Broadcast (호출자 책임)
 	FOnQuestPullChanged OnQuestPullChanged;
+
+	// --- 배정(Assignment): 퀘스트-NPC 소유권의 진실원 ---
+
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_Assignments, Category="Quest")
+	TArray<FQuestAssignment> Assignments;
+
+	UFUNCTION()
+	void OnRep_Assignments();
+
+	FOnAssignmentsChanged OnAssignmentsChanged;
+
+	// 서버 권위: 퀘스트를 파티에 배정한다. 성공 시 AssignmentId, 실패 시 INDEX_NONE.
+	int32 AssignQuest(int32 QuestId, const TArray<int32>& Party);
 };
