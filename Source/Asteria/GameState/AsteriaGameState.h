@@ -15,6 +15,10 @@ class ASTERIA_API AAsteriaGameState : public AGameStateBase
 {
 	GENERATED_BODY()
 	
+	AAsteriaGameState();
+	
+	int32 QuestCount = 0;
+	
 public:
 	UPROPERTY(VisibleAnywhere, Category="Quest")
 	TArray<FQuest> QuestPull;
