@@ -6,6 +6,10 @@
 #include "GameFramework/Character.h"
 #include "AsteriaNpc.generated.h"
 
+class AApproachPointActor;
+class IApproachable;
+class AQuestBoard;
+
 UCLASS()
 class ASTERIA_API AAsteriaNpc : public ACharacter
 {
@@ -25,4 +29,9 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	UPROPERTY(EditInstanceOnly, Category="BehaviorTree")
+	TObjectPtr<AActor> PostQuestBoardActor;
+
+	AActor* GetPostQuestBoardActor() const { return PostQuestBoardActor; }
 };

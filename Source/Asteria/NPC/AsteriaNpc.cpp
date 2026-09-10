@@ -2,12 +2,16 @@
 
 
 #include "NPC/AsteriaNpc.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 // Sets default values
 AAsteriaNpc::AAsteriaNpc()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	
+	bUseControllerRotationYaw = false;
+	GetCharacterMovement()->bOrientRotationToMovement = true;
 }
 
 // Called when the game starts or when spawned
