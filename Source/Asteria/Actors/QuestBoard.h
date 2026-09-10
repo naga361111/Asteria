@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Interaction/Approachable.h"
 #include "QuestBoard.generated.h"
 
 UCLASS()

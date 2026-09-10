@@ -3,8 +3,6 @@
 
 #include "QuestBoard.h"
 
-#include "Components/BoxComponent.h"
-
 
 // Sets default values
 AQuestBoard::AQuestBoard()
@@ -17,7 +15,6 @@ AQuestBoard::AQuestBoard()
 void AQuestBoard::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 // Called every frame
@@ -25,4 +22,3 @@ void AQuestBoard::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 }
-
