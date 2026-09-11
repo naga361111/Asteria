@@ -39,6 +39,8 @@ void UQuestService::OnRep_Claims()
 
 int32 UQuestService::ClaimQuest(int32 QuestId, const TArray<int32>& Party)
 {
+	UE_LOG(LogTemp, Warning, TEXT("ClaimQ Start: %d"), Claims.Num())
+	
 	// 소유·복제 방향 불변조건: 상태 변경은 호스트만.
 	if (!GetOwner() || !GetOwner()->HasAuthority())
 	{
