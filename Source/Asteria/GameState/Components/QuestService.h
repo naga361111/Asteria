@@ -9,6 +9,9 @@
 
 DECLARE_MULTICAST_DELEGATE(FOnQuestPullChanged);
 DECLARE_MULTICAST_DELEGATE(FOnClaimsChanged);
+// 특정 Claim이 Pending→Accepted로 확정됐음을 알리는 서버 로컬 신호. 인자는 확정된 ClaimId.
+// (WaitForConfirm BT 태스크가 자기 ClaimId만 필터해 FinishLatentTask 호출용. 복제 아님)
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnClaimConfirmed, int32 /*ClaimId*/);
 
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -43,6 +46,8 @@ public:
 	void OnRep_Claims();
 
 	FOnClaimsChanged OnClaimsChanged;
+	
+	FOnClaimConfirmed OnClaimConfirmed;
 
 	// 서버 권위: 퀘스트를 파티가 집는다(보드 선택 = 소유권 획득). Select+Assign을 하나로.
 	// 성공 시 ClaimId, 실패(권위 없음/미존재/이미 집힘/빈 파티) 시 INDEX_NONE.
