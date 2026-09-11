@@ -6,6 +6,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "AsteriaGameState.generated.h"
 
+class UCounterService;
 class UQuestService;
 
 /**
@@ -21,4 +22,7 @@ class ASTERIA_API AAsteriaGameState : public AGameStateBase
 public:
 	UPROPERTY(VisibleAnywhere, Category="Quest")
 	TObjectPtr<UQuestService> QuestService;
+	
+	UPROPERTY(VisibleAnywhere, Category="Quest")
+	TObjectPtr<UCounterService> CounterService;
 };

@@ -7,6 +7,7 @@
 #include "NPC/AsteriaNpc.h"
 #include "GameState/AsteriaGameState.h"
 #include "GameState/Components/QuestService.h"
+#include "GameState/Components/CounterService.h"
 
 // 이 태스크의 실행별 상태. 노드는 트리를 쓰는 모든 AI가 공유하는 단일 인스턴스라
 // 멤버 변수에 두면 서로 덮어쓴다 → NodeMemory에 담는다.
@@ -36,6 +37,9 @@ EBTNodeResult::Type UBTTask_WaitForConfirmQuest::ExecuteTask(UBehaviorTreeCompon
 	UQuestService* Service = GS->QuestService;
 	if (Service == nullptr) return EBTNodeResult::Failed;
 
+	UCounterService* Counter = GS->CounterService;
+	if (Counter == nullptr) return EBTNodeResult::Failed;
+
 	// 내가 기다릴 Claim = 파티에 내 NpcId가 든 Claim. (Claims는 public이라 새 접근자 없이 되짚음)
 	// TODO: SelectQuest가 ClaimId를 넘겨주는 경계가 서면 그 값을 받아 이 순회를 대체.
 	int32 WaitingClaimId = INDEX_NONE;
@@ -64,7 +68,15 @@ EBTNodeResult::Type UBTTask_WaitForConfirmQuest::ExecuteTask(UBehaviorTreeCompon
 			}
 		});
 
-	// 스스로 끝내지 않는다. OnClaimConfirmed가 올 때 위 람다가 종료.
+	// 구독을 먼저, 제출은 그 다음 — 순서가 바뀌면 제출 직후의 컨펌을 놓친다.
+	// 실패하면 기다릴 이유가 없다 → Failed. (구독 해제는 OnTaskFinished가 책임)
+	if (!Counter->SubmitClaim(WaitingClaimId))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SubmitClaim failed. Claim:%d"), WaitingClaimId)
+		return EBTNodeResult::Failed;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Wait For Claim:%d Confirm"), WaitingClaimId)
 	return EBTNodeResult::InProgress;
 }
 

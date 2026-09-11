@@ -37,7 +37,5 @@ EBTNodeResult::Type UBTTask_SelectQuest::ExecuteTask(UBehaviorTreeComponent& Own
 		return EBTNodeResult::Failed;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Claimed: %d"), QuestId)
-	UE_LOG(LogTemp, Warning, TEXT("Claim: %d"), QuestService->Claims.Num())
 	return EBTNodeResult::Succeeded;
 }
