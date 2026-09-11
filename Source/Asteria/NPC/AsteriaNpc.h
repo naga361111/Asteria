@@ -31,7 +31,11 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	UPROPERTY(EditInstanceOnly, Category="BehaviorTree")
-	TObjectPtr<AActor> PostQuestBoardActor;
-
-	AActor* GetPostQuestBoardActor() const { return PostQuestBoardActor; }
+	AActor* PostQuestBoardActor;
+	
+	UPROPERTY(EditInstanceOnly, Category="BehaviorTree")
+	AActor* GuildCounterActor;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Npc")
+	int32 NpcId = 0;
 };

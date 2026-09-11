@@ -15,7 +15,6 @@ void UQuestTileEntryWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
 
 	QuestIdText->SetText(FText::AsNumber(Entry->Quest.QuestId));
 
-	const FString TypeName = StaticEnum<EQuest>()->GetNameStringByValue(
-		static_cast<int64>(Entry->Quest.QuestType));
-	QuestTypeText->SetText(FText::FromString(TypeName));
+	// QuestTypeText 위젯명은 WBP 바인딩 유지를 위해 그대로. 표시 내용은 파생 가용성.
+	QuestTypeText->SetText(FText::FromString(Entry->bClaimed ? TEXT("Claimed") : TEXT("Available")));
 }

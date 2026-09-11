@@ -62,7 +62,8 @@ void ANpcAIController::OnPossess(APawn* InPawn)
 		{
 			if (AAsteriaNpc* Npc = Cast<AAsteriaNpc>(InPawn))
 			{
-				BB->SetValueAsObject(FName("PostQuestBoard"), Npc->GetPostQuestBoardActor());
+				BB->SetValueAsObject(FName("PostQuestBoard"), Npc->PostQuestBoardActor);
+				BB->SetValueAsObject(FName("GuildCounter"), Npc->GuildCounterActor);
 			}
 		}
 		RunBehaviorTree(BehaviorTree);

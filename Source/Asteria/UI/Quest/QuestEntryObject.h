@@ -18,4 +18,8 @@ class ASTERIA_API UQuestEntryObject : public UObject
 public:
 	UPROPERTY()
 	FQuest Quest;
+
+	// 파생 상태: QuestService->IsQuestClaimed()로 보드가 join해 채운다.
+	UPROPERTY()
+	bool bClaimed = false;
 };

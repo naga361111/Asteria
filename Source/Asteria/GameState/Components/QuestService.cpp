@@ -13,10 +13,9 @@ UQuestService::UQuestService()
 
 	for (int i = 0; i < 50; ++i)
 	{
-		FQuest Quest = {QuestCount, EQuest::Generated};
+		FQuest Quest;
+		Quest.QuestId = QuestCount++;
 		QuestPull.Add(Quest);
-
-		QuestCount++;
 	}
 }
 
@@ -25,7 +24,7 @@ void UQuestService::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(UQuestService, QuestPull);
-	DOREPLIFETIME(UQuestService, Assignments);
+	DOREPLIFETIME(UQuestService, Claims);
 }
 
 void UQuestService::OnRep_QuestPull()
@@ -33,12 +32,12 @@ void UQuestService::OnRep_QuestPull()
 	OnQuestPullChanged.Broadcast();
 }
 
-void UQuestService::OnRep_Assignments()
+void UQuestService::OnRep_Claims()
 {
-	OnAssignmentsChanged.Broadcast();
+	OnClaimsChanged.Broadcast();
 }
 
-int32 UQuestService::AssignQuest(int32 QuestId, const TArray<int32>& Party)
+int32 UQuestService::ClaimQuest(int32 QuestId, const TArray<int32>& Party)
 {
 	// 소유·복제 방향 불변조건: 상태 변경은 호스트만.
 	if (!GetOwner() || !GetOwner()->HasAuthority())
@@ -46,24 +45,36 @@ int32 UQuestService::AssignQuest(int32 QuestId, const TArray<int32>& Party)
 		return INDEX_NONE;
 	}
 
-	// 입력 검증(경계): 존재하는 퀘스트인가 / 파티가 비지 않았는가.
-	// TODO: 이미 배정된 퀘스트가 아닌지 / 파티 NPC가 다른 배정에 묶여있지 않은지도 여기서 검증.
+	// 입력 검증(경계): 존재하는가 / 아직 안 집혔는가 / 파티가 비지 않았는가.
 	const bool bQuestExists = QuestPull.ContainsByPredicate(
 		[QuestId](const FQuest& Q) { return Q.QuestId == QuestId; });
-	if (!bQuestExists || Party.Num() == 0)
+	if (!bQuestExists || IsQuestClaimed(QuestId) || Party.Num() == 0)
 	{
 		return INDEX_NONE;
 	}
 
-	FQuestAssignment Assignment;
-	Assignment.AssignmentId = AssignmentCount++;
-	Assignment.QuestId = QuestId;
-	Assignment.Party = Party;
+	FQuestClaim Claim;
+	Claim.ClaimId = ClaimCount++;
+	Claim.QuestId = QuestId;
+	Claim.Party = Party;
 
-	Assignments.Add(Assignment);
+	Claims.Add(Claim);
 
 	// 서버는 OnRep이 자동 호출되지 않으므로 직접 통지.
-	OnAssignmentsChanged.Broadcast();
+	OnClaimsChanged.Broadcast();
 
-	return Assignment.AssignmentId;
+	return Claim.ClaimId;
+}
+
+bool UQuestService::IsQuestClaimed(int32 QuestId) const
+{
+	return Claims.ContainsByPredicate(
+		[QuestId](const FQuestClaim& C) { return C.QuestId == QuestId; });
+}
+
+int32 UQuestService::FindAvailableQuestId() const
+{
+	const FQuest* Quest = QuestPull.FindByPredicate(
+		[this](const FQuest& Q) { return !IsQuestClaimed(Q.QuestId); });
+	return Quest ? Quest->QuestId : INDEX_NONE;
 }
