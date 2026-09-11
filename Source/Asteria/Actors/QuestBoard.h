@@ -4,10 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Interaction/Interactable.h"
 #include "QuestBoard.generated.h"
 
 UCLASS()
-class ASTERIA_API AQuestBoard : public AActor
+class ASTERIA_API AQuestBoard : public AActor, public IInteractable
 {
 	GENERATED_BODY()
 
@@ -22,4 +23,7 @@ protected:
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+	
+	virtual bool CanInteract() const override;
+	virtual void OnInteract(AAsteriaPlayer* Interactor) override;
 };

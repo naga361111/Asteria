@@ -3,6 +3,9 @@
 
 #include "QuestBoard.h"
 
+#include "GameState/AsteriaGameState.h"
+#include "GameState/Components/CounterService.h"
+
 
 // Sets default values
 AQuestBoard::AQuestBoard()
@@ -21,4 +24,23 @@ void AQuestBoard::BeginPlay()
 void AQuestBoard::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+}
+
+bool AQuestBoard::CanInteract() const
+{
+	return true;
+}
+
+void AQuestBoard::OnInteract(AAsteriaPlayer* Interactor)
+{
+	AAsteriaGameState* GS = GetWorld()->GetGameState<AAsteriaGameState>();
+	if (GS == nullptr) return;
+
+	UQuestService* Service = GS->QuestService;
+	if (Service == nullptr) return;
+
+	UCounterService* Counter = GS->CounterService;
+	if (Counter == nullptr) return;
+	
+	UE_LOG(LogTemp, Warning, TEXT("Overlapped: %d"), Counter->SubmittedClaimIds.Num())
 }
