@@ -51,6 +51,21 @@ public:
 	
 	FOnQuestAssignmentAccepted OnQuestAssignmentAccepted;
 
+	// --- 정산 대기: 창구 정산을 기다리는 Assignment들 ---
+
+	// 쓰기는 서버 권위, 클라는 복제된 값을 읽기만 한다.
+	// QuestAssignments의 사본이므로 원본이 전이·제거될 때 함께 갱신하는 건 넣는 쪽 책임이다.
+	UPROPERTY(VisibleAnywhere, Replicated, Category="Quest")
+	TArray<FQuestAssignment> SettleQuestAssignments;
+
+	// 정산 대기열에 올린다(Cleared인 것만). 실패(권위 없음/미존재/상태 불일치/이미 대기 중) 시 false.
+	// 상태 전이가 아니라 대기열 등재다 — Cleared→Settled 전이는 창구가 정산할 때 따로 일어난다.
+	bool EnqueueSettleQuestAssignment(int32 AssignmentId);
+
+	// 정산 대기열에서 내린다. 정산 완료·대기 중단(Abort·NPC 소멸) 어느 쪽이든 이 하나로 회수한다.
+	// 올린 쪽이 내리는 것까지 책임진다 — 안 그러면 원본이 사라져도 사본이 남는다.
+	bool DequeueSettleQuestAssignment(int32 AssignmentId);
+
 	// --- 상태 전이: 전부 서버 권위. QuestAssignments를 쓰는 곳은 여기뿐이다. ---
 
 	// ∅→Assigned. 퀘스트를 파티가 집는다(보드 선택 = 소유권 획득). Select+Assign을 하나로.
@@ -67,7 +82,7 @@ public:
 	bool AcceptQuestAssignment(int32 AssignmentId);
 
 	// Accepted→Cleared. NPC가 수행을 마친다. 실행 경로는 던전 수행(BT) → 여기.
-	// terminal이므로 이후 어떤 전이도 성공하지 않는다(중복 완료는 From 검사에서 막힌다).
+	// 다음은 창구 정산(Cleared→Settled)이고, 중복 완료는 From 검사에서 막힌다.
 	bool ClearQuestAssignment(int32 AssignmentId);
 
 	// --- 파생 질의: 상태에서 읽어낼 뿐 따로 저장하지 않는다 ---

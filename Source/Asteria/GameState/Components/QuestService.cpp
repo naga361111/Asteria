@@ -25,6 +25,7 @@ void UQuestService::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 
 	DOREPLIFETIME(UQuestService, QuestPull);
 	DOREPLIFETIME(UQuestService, QuestAssignments);
+	DOREPLIFETIME(UQuestService, SettleQuestAssignments);
 }
 
 void UQuestService::OnRep_QuestPull()
@@ -118,6 +119,45 @@ bool UQuestService::ClearQuestAssignment(int32 AssignmentId)
 {
 	return TransitionQuestAssignment(AssignmentId,
 		EQuestAssignmentState::Accepted, EQuestAssignmentState::Cleared) != nullptr;
+}
+
+bool UQuestService::EnqueueSettleQuestAssignment(int32 AssignmentId)
+{
+	// 소유·복제 방향 불변조건: 대기열 쓰기도 호스트만.
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return false;
+	}
+
+	// 정산 대기 자격은 원본의 State가 정한다 — 대기열은 그 사실을 복제해 보여주는 사본일 뿐이다.
+	const FQuestAssignment* Assignment = FindQuestAssignment(AssignmentId);
+	if (!Assignment || Assignment->State != EQuestAssignmentState::Cleared)
+	{
+		return false;
+	}
+
+	// 재진입(태스크 재실행 등)으로 같은 Assignment가 두 줄 서지 않게.
+	const bool bAlreadyQueued = SettleQuestAssignments.ContainsByPredicate(
+		[AssignmentId](const FQuestAssignment& C) { return C.AssignmentId == AssignmentId; });
+	if (bAlreadyQueued)
+	{
+		return false;
+	}
+
+	SettleQuestAssignments.Add(*Assignment);
+
+	return true;
+}
+
+bool UQuestService::DequeueSettleQuestAssignment(int32 AssignmentId)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return false;
+	}
+
+	return SettleQuestAssignments.RemoveAll(
+		[AssignmentId](const FQuestAssignment& C) { return C.AssignmentId == AssignmentId; }) > 0;
 }
 
 bool UQuestService::IsQuestAssigned(int32 QuestId) const

@@ -17,7 +17,7 @@ struct FQuest
 //
 // 해제(반려·포기·NPC 소멸)는 상태 값이 아니라 QuestAssignments 배열에서의 제거로 표현한다.
 // 그래서 "중단"에는 terminal 값이 없고, 퀘스트 가용성이 "살아있는 Assignment의 존재"로 계속 파생된다.
-// 완수(Cleared)만은 예외로 값으로 남긴다 — 보상·평판 정산의 근거가 제거와 함께 사라지면 안 되기 때문.
+// 완수 이후(Cleared·Settled)만은 예외로 값으로 남긴다 — 보상·평판 정산의 근거가 제거와 함께 사라지면 안 되기 때문.
 UENUM()
 enum class EQuestAssignmentState : uint8
 {
@@ -27,8 +27,10 @@ enum class EQuestAssignmentState : uint8
 	Submitted,
 	// 플레이어가 수주를 확정했다 — 다음 행위자는 NPC(던전 수행).
 	Accepted,
-	// 수행이 끝났다. 다음 행위자가 없는 유일한 terminal 값 — 여기서 더 전이하지 않는다.
+	// 수행이 끝났다. 창구 정산이 남았다 — 다음 행위자는 플레이어.
 	Cleared,
+	// 창구에서 보상·평판까지 정산됐다. 다음 행위자가 없는 유일한 terminal 값 — 여기서 더 전이하지 않는다.
+	Settled,
 };
 
 // 퀘스트-NPC 소유권의 단일 진실원. Quest도 NPC도 서로를 가리키지 않고,
