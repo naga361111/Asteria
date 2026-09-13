@@ -3,53 +3,38 @@
 
 #include "CounterService.h"
 
-#include "Net/UnrealNetwork.h"
+#include "QuestService.h"
+#include "GameState/AsteriaGameState.h"
 
 
 // Sets default values for this component's properties
 UCounterService::UCounterService()
 {
-	SetIsReplicatedByDefault(true);
-
+	// 복제할 상태가 없다. 제출함은 QuestService의 QuestAssignments에서 파생되는 뷰일 뿐.
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-void UCounterService::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+UQuestService* UCounterService::GetQuestService() const
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(UCounterService, SubmittedClaimIds);
+	AAsteriaGameState* GameState = Cast<AAsteriaGameState>(GetOwner());
+	return GameState ? GameState->QuestService : nullptr;
 }
 
-void UCounterService::OnRep_SubmittedClaims()
+bool UCounterService::SubmitQuestAssignment(int32 AssignmentId)
 {
-	OnSubmittedClaimsChanged.Broadcast();
+	UQuestService* QuestService = GetQuestService();
+	return QuestService && QuestService->SubmitQuestAssignment(AssignmentId);
 }
 
-bool UCounterService::SubmitClaim(int32 ClaimId)
+bool UCounterService::AcceptQuestAssignment(int32 AssignmentId)
 {
-	// 소유·복제 방향 불변조건: 상태 변경은 호스트만.
-	if (!GetOwner() || !GetOwner()->HasAuthority())
-	{
-		return false;
-	}
-
-	// 입력 검증(경계): 유효한 ID인가 / 중복 제출은 아닌가.
-	// NOTE: "실재하는 Claim인가"는 여기서 못 본다 — QuestService를 참조할지 말지(의존 방향)가 아직 미정.
-	if (ClaimId == INDEX_NONE || IsClaimSubmitted(ClaimId))
-	{
-		return false;
-	}
-
-	SubmittedClaimIds.Add(ClaimId);
-
-	// 서버는 OnRep이 자동 호출되지 않으므로 직접 통지.
-	OnSubmittedClaimsChanged.Broadcast();
-
-	return true;
+	UQuestService* QuestService = GetQuestService();
+	return QuestService && QuestService->AcceptQuestAssignment(AssignmentId);
 }
 
-bool UCounterService::IsClaimSubmitted(int32 ClaimId) const
+bool UCounterService::IsQuestAssignmentSubmitted(int32 AssignmentId) const
 {
-	return SubmittedClaimIds.Contains(ClaimId);
+	const UQuestService* QuestService = GetQuestService();
+	const FQuestAssignment* Assignment = QuestService ? QuestService->FindQuestAssignment(AssignmentId) : nullptr;
+	return Assignment && Assignment->State == EQuestAssignmentState::Submitted;
 }

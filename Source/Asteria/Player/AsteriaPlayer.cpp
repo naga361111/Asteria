@@ -7,6 +7,24 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Interaction/Interactable.h"
+#include "GameState/AsteriaGameState.h"
+#include "GameState/Components/CounterService.h"
+
+void AAsteriaPlayer::Server_AcceptQuestAssignment_Implementation(int32 AssignmentId)
+{
+	AAsteriaGameState* GameState = GetWorld()->GetGameState<AAsteriaGameState>();
+	UCounterService* CounterService = GameState ? GameState->CounterService : nullptr;
+	if (CounterService == nullptr) return;
+
+	// 여기는 전달만 한다. 실재·상태 검증은 소유자(QuestService)가 하고,
+	// 클라가 보낸 AssignmentId가 stale이면 그쪽에서 조용히 거절된다.
+	//
+	// TODO: "이 플레이어가 실제로 창구 앞에 있는가"는 아직 못 막는다.
+	// AAsteriaPlayer::OverlappedActor는 IsLocallyControlled 경로에서만 채워져 서버엔 없고,
+	// 창구를 식별할 타입도 아직 없다(BP_CounterActor는 C++ 타입이 없다).
+	// 상호작용 대상을 서버가 아는 계약이 서면 그때 여기서 막는다.
+	CounterService->AcceptQuestAssignment(AssignmentId);
+}
 
 // Sets default values
 AAsteriaPlayer::AAsteriaPlayer()

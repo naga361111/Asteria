@@ -15,10 +15,10 @@ void UQuestBoardWidget::NativeConstruct()
 	{
 		if (UQuestService* Service = GS->QuestService)
 		{
-			// 표시 상태는 QuestPull(무엇) + Claims(집힘 여부)의 join이라 둘 다 구독한다.
-			// 현재 흐름에선 QuestPull은 정적이고 실제 갱신은 Claims 변경에서 온다.
+			// 표시 상태는 QuestPull(무엇) + QuestAssignments(집힘 여부)의 join이라 둘 다 구독한다.
+			// 현재 흐름에선 QuestPull은 정적이고 실제 갱신은 QuestAssignments 변경에서 온다.
 			Service->OnQuestPullChanged.AddUObject(this, &UQuestBoardWidget::RefreshQuests);
-			Service->OnClaimsChanged.AddUObject(this, &UQuestBoardWidget::RefreshQuests);
+			Service->OnQuestAssignmentsChanged.AddUObject(this, &UQuestBoardWidget::RefreshQuests);
 			RefreshQuests();
 		}
 	}
@@ -43,7 +43,7 @@ void UQuestBoardWidget::RefreshQuests()
 	{
 		UQuestEntryObject* Entry = NewObject<UQuestEntryObject>(this);
 		Entry->Quest = Quest;
-		Entry->bClaimed = Service->IsQuestClaimed(Quest.QuestId);
+		Entry->bAssigned = Service->IsQuestAssigned(Quest.QuestId);
 		QuestTileView->AddItem(Entry);
 	}
 }

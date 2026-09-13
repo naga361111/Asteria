@@ -6,10 +6,18 @@
 #include "Components/ActorComponent.h"
 #include "CounterService.generated.h"
 
-// 창구 제출 목록이 바뀌었음을 알리는 신호. (서버는 직접 Broadcast, 클라는 OnRep이 Broadcast)
-DECLARE_MULTICAST_DELEGATE(FOnSubmittedClaimsChanged);
+class UQuestService;
 
-
+/**
+ * 창구(카운터)의 경계. 상태는 하나도 소유하지 않는다.
+ *
+ * "제출됨"은 Assignment의 State(EQuestAssignmentState::Submitted)가 전부다. 창구가 제출 목록을
+ * 따로 복제해 들면 같은 사실의 진실원이 둘이 되고, Accept 시 한쪽만 갱신되는 순간 어긋난다.
+ * 그래서 여기는 읽기 판정을 파생시키고, 쓰기는 소유자(QuestService)에 위임만 한다.
+ *
+ * 의존 방향: CounterService → QuestService. 창구가 Assignment를 검사해 통과시키는 쪽이지
+ * 그 반대가 아니다. 반려·수락 입력이 붙을 자리도 여기다.
+ */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ASTERIA_API UCounterService : public UActorComponent
 {
@@ -19,24 +27,18 @@ public:
 	// Sets default values for this component's properties
 	UCounterService();
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	// NPC가 컨펌 요구 퀘스트를 창구에 올린다(Assigned→Submitted).
+	// 권위·실재·상태 검증은 전부 QuestService가 한다 — 여기서 또 하면 검증이 두 벌이 된다.
+	bool SubmitQuestAssignment(int32 AssignmentId);
 
-	// --- 창구 제출함: NPC가 컨펌을 요구하며 올린 Claim들 ---
-	// Claim 본체(FQuestClaim)는 QuestService가 소유한다. 여기는 ID 참조만 들고 있는 목록이다.
-	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_SubmittedClaims, Category="Counter")
-	TArray<int32> SubmittedClaimIds;
+	// 플레이어가 창구에서 수주를 확정한다(Submitted→Accepted).
+	// 창구 UI의 수락 버튼이 도달하는 종착점. 검증은 여기서 하지 않는다 — 위와 같은 이유.
+	bool AcceptQuestAssignment(int32 AssignmentId);
 
-	UFUNCTION()
-	void OnRep_SubmittedClaims();
+	// 제출 여부는 Assignment의 State에서 파생한다.
+	bool IsQuestAssignmentSubmitted(int32 AssignmentId) const;
 
-	FOnSubmittedClaimsChanged OnSubmittedClaimsChanged;
-
-	// 서버 권위: NPC가 컨펌 요구 퀘스트를 창구에 올린다.
-	// 실패(권위 없음/잘못된 ID/이미 제출됨) 시 false.
-	bool SubmitClaim(int32 ClaimId);
-
-	bool IsClaimSubmitted(int32 ClaimId) const;
-
-	// TODO: 컨펌·반려로 제출함에서 빼는 경계(RemoveSubmittedClaim 등)는 아직 없다.
-	// 누가 빼는지(QuestService의 ConfirmClaim이냐, 창구 UI 입력이냐)가 정해지면 그때 연다.
+private:
+	// 두 서비스 모두 GameState의 컴포넌트라 오너를 거쳐 찾는다.
+	UQuestService* GetQuestService() const;
 };

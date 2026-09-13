@@ -25,14 +25,14 @@ EBTNodeResult::Type UBTTask_SelectQuest::ExecuteTask(UBehaviorTreeComponent& Own
 		return EBTNodeResult::Failed;
 	}
 
-	// 무엇을 집을지만 고른다. 소유권 획득의 검증·기록은 ClaimQuest가 서버 권위로 한다.
+	// 무엇을 집을지만 고른다. 소유권 획득의 검증·기록은 AssignQuest가 서버 권위로 한다.
 	const int32 QuestId = QuestService->FindAvailableQuestId();
 	if (QuestId == INDEX_NONE)
 	{
 		return EBTNodeResult::Failed;
 	}
 
-	if (QuestService->ClaimQuest(QuestId, { Npc->NpcId }) == INDEX_NONE)
+	if (QuestService->AssignQuest(QuestId, { Npc->NpcId }) == INDEX_NONE)
 	{
 		return EBTNodeResult::Failed;
 	}

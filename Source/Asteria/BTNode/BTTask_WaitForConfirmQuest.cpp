@@ -14,13 +14,18 @@
 struct FBTWaitForConfirmQuestMemory
 {
 	TWeakObjectPtr<UQuestService> QuestService;
-	FDelegateHandle ConfirmedHandle;
-	int32 WaitingClaimId = INDEX_NONE;
+	FDelegateHandle AcceptedHandle;
+	int32 WaitingAssignmentId = INDEX_NONE;
 };
 
 UBTTask_WaitForConfirmQuest::UBTTask_WaitForConfirmQuest()
 {
 	NodeName = TEXT("Wait For Confirm Quest");
+
+	// bNotifyTaskFinished는 기본 false다 — 안 켜면 OnTaskFinished가 호출되지 않아
+	// 아래에서 거는 구독이 영영 해제되지 않는다(실행할 때마다 람다가 쌓인다).
+	// 이 매크로가 오버라이드 여부를 보고 Tick/TaskFinished 플래그를 맞춰준다.
+	INIT_TASK_NODE_NOTIFY_FLAGS();
 }
 
 EBTNodeResult::Type UBTTask_WaitForConfirmQuest::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
@@ -40,43 +45,45 @@ EBTNodeResult::Type UBTTask_WaitForConfirmQuest::ExecuteTask(UBehaviorTreeCompon
 	UCounterService* Counter = GS->CounterService;
 	if (Counter == nullptr) return EBTNodeResult::Failed;
 
-	// 내가 기다릴 Claim = 파티에 내 NpcId가 든 Claim. (Claims는 public이라 새 접근자 없이 되짚음)
-	// TODO: SelectQuest가 ClaimId를 넘겨주는 경계가 서면 그 값을 받아 이 순회를 대체.
-	int32 WaitingClaimId = INDEX_NONE;
-	for (const FQuestClaim& Claim : Service->Claims)
+	// 내가 기다릴 Assignment = 파티에 내 NpcId가 들고 아직 제출 전(Assigned)인 Assignment.
+	// 상태를 안 보면 이미 올린 것·수주 확정된 것까지 집어 엉뚱한 Assignment를 기다린다.
+	// TODO: SelectQuest가 AssignmentId를 넘겨주는 경계가 서면 그 값을 받아 이 순회를 대체.
+	int32 WaitingAssignmentId = INDEX_NONE;
+	for (const FQuestAssignment& Assignment : Service->QuestAssignments)
 	{
-		if (Claim.Party.Contains(Npc->NpcId))
+		if (Assignment.State == EQuestAssignmentState::Assigned && Assignment.Party.Contains(Npc->NpcId))
 		{
-			WaitingClaimId = Claim.ClaimId;
+			WaitingAssignmentId = Assignment.AssignmentId;
 			break;
 		}
 	}
-	if (WaitingClaimId == INDEX_NONE) return EBTNodeResult::Failed; // 집은 게 없으면 기다릴 대상도 없음
+	if (WaitingAssignmentId == INDEX_NONE) return EBTNodeResult::Failed; // 집은 게 없으면 기다릴 대상도 없음
 
 	FBTWaitForConfirmQuestMemory* Mem = CastInstanceNodeMemory<FBTWaitForConfirmQuestMemory>(NodeMemory);
 	Mem->QuestService = Service;
-	Mem->WaitingClaimId = WaitingClaimId;
+	Mem->WaitingAssignmentId = WaitingAssignmentId;
 
-	// 밖에서 깨우고(QuestService가 컨펌 시 OnClaimConfirmed.Broadcast) → 안에서 끝낸다(이 람다가 FinishLatentTask 호출).
-	// 브로드캐스트는 어느 Claim이든 오므로 내 ClaimId만 필터.
-	Mem->ConfirmedHandle = Service->OnClaimConfirmed.AddLambda(
-		[this, &OwnerComp, Mem](int32 ConfirmedClaimId)
+	// 밖에서 깨우고(QuestService가 Submitted→Accepted 시 OnQuestAssignmentAccepted.Broadcast) → 안에서 끝낸다(이 람다가 FinishLatentTask 호출).
+	// 브로드캐스트는 어느 Assignment든 오므로 내 AssignmentId만 필터.
+	Mem->AcceptedHandle = Service->OnQuestAssignmentAccepted.AddLambda(
+		[this, &OwnerComp, Mem](int32 AcceptedAssignmentId)
 		{
-			if (ConfirmedClaimId == Mem->WaitingClaimId)
+			if (AcceptedAssignmentId == Mem->WaitingAssignmentId)
 			{
+				UE_LOG(LogTemp, Warning, TEXT("Assignment Accepted: %d"), AcceptedAssignmentId)
 				FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 			}
 		});
 
 	// 구독을 먼저, 제출은 그 다음 — 순서가 바뀌면 제출 직후의 컨펌을 놓친다.
 	// 실패하면 기다릴 이유가 없다 → Failed. (구독 해제는 OnTaskFinished가 책임)
-	if (!Counter->SubmitClaim(WaitingClaimId))
+	if (!Counter->SubmitQuestAssignment(WaitingAssignmentId))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("SubmitClaim failed. Claim:%d"), WaitingClaimId)
+		UE_LOG(LogTemp, Warning, TEXT("SubmitQuestAssignment failed. Assignment:%d"), WaitingAssignmentId)
 		return EBTNodeResult::Failed;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Wait For Claim:%d Confirm"), WaitingClaimId)
+	UE_LOG(LogTemp, Warning, TEXT("Wait For Assignment:%d Confirm"), WaitingAssignmentId)
 	return EBTNodeResult::InProgress;
 }
 
@@ -84,13 +91,13 @@ void UBTTask_WaitForConfirmQuest::OnTaskFinished(UBehaviorTreeComponent& OwnerCo
 {
 	// 성공/실패/Abort 어느 경로로 끝나든 여기로 온다 → 구독을 반드시 해제(댕글링 방지).
 	FBTWaitForConfirmQuestMemory* Mem = CastInstanceNodeMemory<FBTWaitForConfirmQuestMemory>(NodeMemory);
-	if (Mem->QuestService.IsValid() && Mem->ConfirmedHandle.IsValid())
+	if (Mem->QuestService.IsValid() && Mem->AcceptedHandle.IsValid())
 	{
-		Mem->QuestService->OnClaimConfirmed.Remove(Mem->ConfirmedHandle);
+		Mem->QuestService->OnQuestAssignmentAccepted.Remove(Mem->AcceptedHandle);
 	}
-	Mem->ConfirmedHandle.Reset();
+	Mem->AcceptedHandle.Reset();
 	Mem->QuestService.Reset();
-	Mem->WaitingClaimId = INDEX_NONE;
+	Mem->WaitingAssignmentId = INDEX_NONE;
 
 	Super::OnTaskFinished(OwnerComp, NodeMemory, TaskResult);
 }

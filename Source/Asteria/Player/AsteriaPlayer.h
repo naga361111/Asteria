@@ -71,6 +71,12 @@ public:
 	// 현재 상태를 뒤집는다. 상호작용 토글용.
 	void ToggleUIInputMode() { SetUIInputMode(!bUIInputMode); }
 
+	// 창구 수락 입력의 클라→서버 경계.
+	// 상태 소유자는 GameState의 CounterService지만 GameState는 클라가 소유한 액터가 아니라
+	// 그 위의 Server RPC는 라우팅되지 않고 버려진다. 그래서 소유 액터인 폰이 대신 받아 넘긴다.
+	UFUNCTION(Server, Reliable)
+	void Server_AcceptQuestAssignment(int32 AssignmentId);
+
 	bool IsUIInputMode() const { return bUIInputMode; }
 
 	// Called every frame

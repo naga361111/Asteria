@@ -7,12 +7,11 @@
 #include "CounterEntryObject.generated.h"
 
 /**
- * TileView의 item source 한 칸. 창구 제출함의 ClaimId 하나를 UObject로 승격시킨 view-model.
+ * TileView의 item source 한 칸. 제출 상태인 Assignment 하나를 UObject로 승격시킨 view-model.
  *
- * CounterService가 소유한 건 ID뿐이라 여기도 ID만 든다.
- * QuestId·파티 같은 Claim 본체 값을 칸에 그리려면 QuestService에 ClaimId 역참조 접근자가 필요한데
- * 아직 없다. 열리면 여기에 파생 필드를 추가하고 보드가 join해 채운다
- * (UQuestEntryObject의 bClaimed와 같은 방식 — join은 칸이 아니라 컨테이너의 일).
+ * 지금은 ID만 든다. QuestId·파티 같은 Assignment 본체 값을 칸에 그리려면
+ * UQuestService::FindQuestAssignment로 역참조해 파생 필드를 채우면 된다
+ * (UQuestEntryObject의 bAssigned와 같은 방식 — join은 칸이 아니라 컨테이너의 일).
  */
 UCLASS()
 class ASTERIA_API UCounterEntryObject : public UObject
@@ -21,5 +20,5 @@ class ASTERIA_API UCounterEntryObject : public UObject
 
 public:
 	UPROPERTY()
-	int32 ClaimId = INDEX_NONE;
+	int32 AssignmentId = INDEX_NONE;
 };

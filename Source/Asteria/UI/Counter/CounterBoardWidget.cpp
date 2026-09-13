@@ -5,7 +5,7 @@
 #include "CounterEntryObject.h"
 #include "Components/TileView.h"
 #include "GameState/AsteriaGameState.h"
-#include "GameState/Components/CounterService.h"
+#include "GameState/Components/QuestService.h"
 
 void UCounterBoardWidget::NativeConstruct()
 {
@@ -19,7 +19,7 @@ void UCounterBoardWidget::NativeConstruct()
 
 	if (AAsteriaGameState* GS = World->GetGameState<AAsteriaGameState>())
 	{
-		BindToCounterService(GS);
+		BindToQuestService(GS);
 	}
 	else
 	{
@@ -39,9 +39,9 @@ void UCounterBoardWidget::NativeDestruct()
 		}
 	}
 
-	if (UCounterService* Service = BoundService.Get())
+	if (UQuestService* Service = BoundService.Get())
 	{
-		Service->OnSubmittedClaimsChanged.RemoveAll(this);
+		Service->OnQuestAssignmentsChanged.RemoveAll(this);
 	}
 	BoundService.Reset();
 
@@ -50,18 +50,19 @@ void UCounterBoardWidget::NativeDestruct()
 
 void UCounterBoardWidget::HandleGameStateSet(AGameStateBase* NewGameState)
 {
-	BindToCounterService(Cast<AAsteriaGameState>(NewGameState));
+	BindToQuestService(Cast<AAsteriaGameState>(NewGameState));
 }
 
-void UCounterBoardWidget::BindToCounterService(AAsteriaGameState* GameState)
+void UCounterBoardWidget::BindToQuestService(AAsteriaGameState* GameState)
 {
-	UCounterService* Service = GameState ? GameState->CounterService : nullptr;
+	UQuestService* Service = GameState ? GameState->QuestService : nullptr;
 	if (!Service || BoundService.Get() == Service)
 	{
 		return;
 	}
 
-	Service->OnSubmittedClaimsChanged.AddUObject(this, &UCounterBoardWidget::RefreshSubmissions);
+	// 제출·수락은 모두 Assignment의 State 전이라 QuestAssignments 변경 신호 하나면 충분하다.
+	Service->OnQuestAssignmentsChanged.AddUObject(this, &UCounterBoardWidget::RefreshSubmissions);
 	BoundService = Service;
 
 	RefreshSubmissions();
@@ -69,17 +70,23 @@ void UCounterBoardWidget::BindToCounterService(AAsteriaGameState* GameState)
 
 void UCounterBoardWidget::RefreshSubmissions()
 {
-	UCounterService* Service = BoundService.Get();
+	UQuestService* Service = BoundService.Get();
 	if (!SubmissionTileView || !Service)
 	{
 		return;
 	}
 
 	SubmissionTileView->ClearListItems();
-	for (const int32 ClaimId : Service->SubmittedClaimIds)
+	for (const FQuestAssignment& Assignment : Service->QuestAssignments)
 	{
+		// 제출함 = QuestAssignments의 필터. 창구에 아직 도착 안 한 Assigned, 이미 끝난 Accepted는 빠진다.
+		if (Assignment.State != EQuestAssignmentState::Submitted)
+		{
+			continue;
+		}
+
 		UCounterEntryObject* Entry = NewObject<UCounterEntryObject>(this);
-		Entry->ClaimId = ClaimId;
+		Entry->AssignmentId = Assignment.AssignmentId;
 		SubmissionTileView->AddItem(Entry);
 	}
 }
