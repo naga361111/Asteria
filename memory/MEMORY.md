@@ -1,3 +1,5 @@
 - [Script folder organization](script-folder-organization.md) — 소스는 항상 폴더로 그룹화, 모듈 루트에 flat 금지
 - [Project direction](project-direction-guild-sim.md) — 코옵 모험가 길드 홀 시뮬(A형)로 스코프 축소 확정, 던전 추상·회색박스 코어부터
 - [Hearthvale kit & structure PCG](hearthvale-modular-kit-pcg.md) — 그리드 300/층고 300/Tavern_D 확정(개구부·계단이 구속조건), PCG_BuildingShell 셸 제너레이터와 소유 경계
+- [Editor build tool](editor-build-tool.md) — 배치 툴 1차 구현 완료(고스트·그리드·자동 적층·Shift 제거). Z는 이산 상태에서만 뽑는다는 함정, 고스트 머티리얼 제약, 남은 미결(카탈로그·검증)
+- [No automation for determinism](no-automation-for-determinism.md) — 버그 고치면서 자동 동작을 수동 조작으로 바꾸지 말 것, 트레이드 불가피하면 먼저 물어볼 것
