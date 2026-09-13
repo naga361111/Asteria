@@ -14,6 +14,9 @@ DECLARE_MULTICAST_DELEGATE(FOnQuestAssignmentsChanged);
 // 특정 Assignment가 Submitted→Accepted로 확정됐음을 알리는 서버 로컬 신호. 인자는 확정된 AssignmentId.
 // (WaitForConfirm BT 태스크가 자기 AssignmentId만 필터해 FinishLatentTask 호출용. 복제 아님)
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnQuestAssignmentAccepted, int32 /*AssignmentId*/);
+// 특정 Assignment가 SubmitForSettled→Settled로 정산 확정됐음을 알리는 서버 로컬 신호. 인자는 정산된 AssignmentId.
+// (WaitForSettleConfirm BT 태스크가 자기 AssignmentId만 필터해 FinishLatentTask 호출용. 복제 아님)
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnQuestAssignmentSettled, int32 /*AssignmentId*/);
 
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -51,6 +54,8 @@ public:
 	
 	FOnQuestAssignmentAccepted OnQuestAssignmentAccepted;
 
+	FOnQuestAssignmentSettled OnQuestAssignmentSettled;
+
 	// --- 정산 대기: 창구 정산을 기다리는 Assignment들 ---
 
 	// 쓰기는 서버 권위, 클라는 복제된 값을 읽기만 한다.
@@ -84,6 +89,10 @@ public:
 	// Accepted→Cleared. NPC가 수행을 마친다. 실행 경로는 던전 수행(BT) → 여기.
 	// 다음은 창구 정산(Cleared→Settled)이고, 중복 완료는 From 검사에서 막힌다.
 	bool ClearQuestAssignment(int32 AssignmentId);
+
+	// Cleared→SubmitForSettled. NPC가 완수한 퀘스트를 창구의 보상 대기 제출함에 올린다.
+	// 올라가 있음은 이 상태값이 전부다 — 창구가 별도 목록을 들지 않는다(SubmitQuestAssignment와 같은 이유).
+	bool SubmitForSettleQuestAssignment(int32 AssignmentId);
 
 	// --- 파생 질의: 상태에서 읽어낼 뿐 따로 저장하지 않는다 ---
 

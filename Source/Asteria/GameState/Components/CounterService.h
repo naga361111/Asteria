@@ -31,6 +31,10 @@ public:
 	// 권위·실재·상태 검증은 전부 QuestService가 한다 — 여기서 또 하면 검증이 두 벌이 된다.
 	bool SubmitQuestAssignment(int32 AssignmentId);
 
+	// NPC가 완수한 퀘스트를 창구의 보상 대기 제출함에 올린다(Cleared→SubmitForSettled).
+	// 수주 제출과 같은 문(창구)을 쓴다 — 검증은 QuestService가 한 벌로 한다.
+	bool SubmitForSettleQuestAssignment(int32 AssignmentId);
+
 	// 플레이어가 창구에서 수주를 확정한다(Submitted→Accepted).
 	// 창구 UI의 수락 버튼이 도달하는 종착점. 검증은 여기서 하지 않는다 — 위와 같은 이유.
 	bool AcceptQuestAssignment(int32 AssignmentId);

@@ -26,6 +26,12 @@ bool UCounterService::SubmitQuestAssignment(int32 AssignmentId)
 	return QuestService && QuestService->SubmitQuestAssignment(AssignmentId);
 }
 
+bool UCounterService::SubmitForSettleQuestAssignment(int32 AssignmentId)
+{
+	UQuestService* QuestService = GetQuestService();
+	return QuestService && QuestService->SubmitForSettleQuestAssignment(AssignmentId);
+}
+
 bool UCounterService::AcceptQuestAssignment(int32 AssignmentId)
 {
 	UQuestService* QuestService = GetQuestService();

@@ -121,6 +121,12 @@ bool UQuestService::ClearQuestAssignment(int32 AssignmentId)
 		EQuestAssignmentState::Accepted, EQuestAssignmentState::Cleared) != nullptr;
 }
 
+bool UQuestService::SubmitForSettleQuestAssignment(int32 AssignmentId)
+{
+	return TransitionQuestAssignment(AssignmentId,
+		EQuestAssignmentState::Cleared, EQuestAssignmentState::SubmitForSettled) != nullptr;
+}
+
 bool UQuestService::EnqueueSettleQuestAssignment(int32 AssignmentId)
 {
 	// 소유·복제 방향 불변조건: 대기열 쓰기도 호스트만.

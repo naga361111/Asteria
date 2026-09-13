@@ -29,6 +29,8 @@ enum class EQuestAssignmentState : uint8
 	Accepted,
 	// 수행이 끝났다. 창구 정산이 남았다 — 다음 행위자는 플레이어.
 	Cleared,
+	// 카운터의 보상 대기 제출함에 올라갔다 - 다음 행위자는 플레이어.
+	SubmitForSettled,
 	// 창구에서 보상·평판까지 정산됐다. 다음 행위자가 없는 유일한 terminal 값 — 여기서 더 전이하지 않는다.
 	Settled,
 };
