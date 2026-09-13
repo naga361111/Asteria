@@ -26,6 +26,17 @@ void AAsteriaPlayer::Server_AcceptQuestAssignment_Implementation(int32 Assignmen
 	CounterService->AcceptQuestAssignment(AssignmentId);
 }
 
+void AAsteriaPlayer::Server_SettleQuestAssignment_Implementation(int32 AssignmentId)
+{
+	AAsteriaGameState* GameState = GetWorld()->GetGameState<AAsteriaGameState>();
+	UCounterService* CounterService = GameState ? GameState->CounterService : nullptr;
+	if (CounterService == nullptr) return;
+
+	// 수락과 같은 전달 전용 경로. 검증은 소유자(QuestService)가 한 벌로 한다.
+	// 창구 앞에 있는지 못 막는 것도 위와 같다.
+	CounterService->SettleQuestAssignment(AssignmentId);
+}
+
 // Sets default values
 AAsteriaPlayer::AAsteriaPlayer()
 {

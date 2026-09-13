@@ -94,6 +94,11 @@ public:
 	// 올라가 있음은 이 상태값이 전부다 — 창구가 별도 목록을 들지 않는다(SubmitQuestAssignment와 같은 이유).
 	bool SubmitForSettleQuestAssignment(int32 AssignmentId);
 
+	// SubmitForSettled→Settled. 플레이어가 창구에서 정산을 확정한다. 유일한 terminal 전이다.
+	// 입력 경로는 정산 UI 버튼 → 플레이어(소유 액터)의 Server RPC → CounterService → 여기.
+	// AcceptQuestAssignment와 같은 이유로 클라가 보낸 AssignmentId를 여기서 다시 검증한다.
+	bool SettleQuestAssignment(int32 AssignmentId);
+
 	// --- 파생 질의: 상태에서 읽어낼 뿐 따로 저장하지 않는다 ---
 
 	// 가용성 파생의 단일 원천. 클라에서도 복제된 QuestAssignments를 읽어 동일 판정.

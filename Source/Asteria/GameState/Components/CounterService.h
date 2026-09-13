@@ -39,6 +39,10 @@ public:
 	// 창구 UI의 수락 버튼이 도달하는 종착점. 검증은 여기서 하지 않는다 — 위와 같은 이유.
 	bool AcceptQuestAssignment(int32 AssignmentId);
 
+	// 플레이어가 창구에서 정산을 확정한다(SubmitForSettled→Settled).
+	// 정산 UI의 확정 버튼이 도달하는 종착점. 검증은 여기서 하지 않는다 — 위와 같은 이유.
+	bool SettleQuestAssignment(int32 AssignmentId);
+
 	// 제출 여부는 Assignment의 State에서 파생한다.
 	bool IsQuestAssignmentSubmitted(int32 AssignmentId) const;
 

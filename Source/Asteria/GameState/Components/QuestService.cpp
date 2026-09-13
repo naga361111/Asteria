@@ -127,6 +127,21 @@ bool UQuestService::SubmitForSettleQuestAssignment(int32 AssignmentId)
 		EQuestAssignmentState::Cleared, EQuestAssignmentState::SubmitForSettled) != nullptr;
 }
 
+bool UQuestService::SettleQuestAssignment(int32 AssignmentId)
+{
+	if (TransitionQuestAssignment(AssignmentId,
+		EQuestAssignmentState::SubmitForSettled, EQuestAssignmentState::Settled) == nullptr)
+	{
+		return false;
+	}
+
+	// 정산을 기다리며 멈춰 있는 NPC를 깨운다. 서버 로컬 신호라 여기서만 발화한다.
+	// (AcceptQuestAssignment가 OnQuestAssignmentAccepted를 쏘는 것과 같은 자리)
+	OnQuestAssignmentSettled.Broadcast(AssignmentId);
+
+	return true;
+}
+
 bool UQuestService::EnqueueSettleQuestAssignment(int32 AssignmentId)
 {
 	// 소유·복제 방향 불변조건: 대기열 쓰기도 호스트만.

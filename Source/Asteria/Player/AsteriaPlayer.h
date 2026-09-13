@@ -77,6 +77,10 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_AcceptQuestAssignment(int32 AssignmentId);
 
+	// 창구 정산 확정 입력의 클라→서버 경계. 수락과 같은 이유로 폰이 대신 받는다.
+	UFUNCTION(Server, Reliable)
+	void Server_SettleQuestAssignment(int32 AssignmentId);
+
 	bool IsUIInputMode() const { return bUIInputMode; }
 
 	// Called every frame
