@@ -3,50 +3,21 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Common/Rank.h"
-#include "Common/RequiredRankUpData.h"
 #include "GameFramework/Character.h"
-#include "Interaction/Interactable.h"
 #include "AsteriaNpc.generated.h"
 
-DECLARE_MULTICAST_DELEGATE(FOnQuestAccepted)
+class AApproachPointActor;
+class IApproachable;
+class AQuestBoard;
 
 UCLASS()
-class ASTERIA_API AAsteriaNpc : public ACharacter, public IInteractable
+class ASTERIA_API AAsteriaNpc : public ACharacter
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this character's properties
 	AAsteriaNpc();
-
-	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
-
-	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_Level, Category="Npc")
-	int32 NpcLevel = 1;
-
-	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_Rank, Category="Npc")
-	ERank NpcRank = ERank::F;
-
-	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_CurrentClearedQuest, Category="Npc")
-	int32 ClearedCurrentRankQuestCount = 0;
-
-	UFUNCTION()
-	void OnRep_Level();
-
-	UFUNCTION()
-	void OnRep_Rank();
-
-	UFUNCTION()
-	void OnRep_CurrentClearedQuest();
-
-	UPROPERTY(EditDefaultsOnly, Category="Npc")
-	TObjectPtr<URequiredRankUpData> RequiredRankUpData;
-
-	FOnQuestAccepted OnQuestAccepted;
-
-	virtual bool CanInteract() const override;
-	virtual void OnInteract(AAsteriaPlayer* Interactor) override;
 
 protected:
 	// Called when the game starts or when spawned
@@ -59,24 +30,15 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	UPROPERTY(VisibleAnywhere, Replicated, Category="Quest")
-	TArray<int32> SelectedQuests;
-
-	UPROPERTY(VisibleAnywhere, Category= "Quest")
-	TArray<int32> AcceptedQuests;
-
-	void QuestCleared(ERank ClearedQuestRank, int32 Reward);
-	void NpcLevelUp();
-	void NpcRankUp();
-
-	UPROPERTY(EditDefaultsOnly, Category="Quest")
-	float FeeRate = 0.2f;
-
-	UPROPERTY(VisibleAnywhere, Category="Npc")
-	int32 NpcMoney;
-
-	void SettleQuestReward(int32 Reward);
-
-	UPROPERTY(VisibleAnywhere, Replicated, Category="Quest")
-	bool bWaitForQuestAccepted;
+	UPROPERTY(EditInstanceOnly, Category="BehaviorTree")
+	AActor* PostQuestBoardActor;
+	
+	UPROPERTY(EditInstanceOnly, Category="BehaviorTree")
+	AActor* GuildCounterActor;
+	
+	UPROPERTY(EditInstanceOnly, Category="BehaviorTree")
+	AActor* DungeonActor;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Npc")
+	int32 NpcId = 0;
 };

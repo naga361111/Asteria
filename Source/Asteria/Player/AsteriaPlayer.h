@@ -7,10 +7,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/Character.h"
-#include "UI/HUD/GuildMoneyWidget.h"
 #include "AsteriaPlayer.generated.h"
-
-class AAsteriaNpc;
 
 struct FInputActionValue;
 
@@ -64,22 +61,31 @@ protected:
 	
 	TWeakObjectPtr<AActor> OverlappedActor;
 
+	// UI 커서 상태는 로컬 클라 전용. 월드 액터가 아니라 로컬 플레이어가 소유한다.
+	bool bUIInputMode = false;
+
 public:
+	// 커서/입력 모드 전환. true면 GameAndUI + 커서 표시, false면 GameOnly + 커서 숨김.
+	void SetUIInputMode(bool bEnable);
+
+	// 현재 상태를 뒤집는다. 상호작용 토글용.
+	void ToggleUIInputMode() { SetUIInputMode(!bUIInputMode); }
+
+	// 창구 수락 입력의 클라→서버 경계.
+	// 상태 소유자는 GameState의 CounterService지만 GameState는 클라가 소유한 액터가 아니라
+	// 그 위의 Server RPC는 라우팅되지 않고 버려진다. 그래서 소유 액터인 폰이 대신 받아 넘긴다.
+	UFUNCTION(Server, Reliable)
+	void Server_AcceptQuestAssignment(int32 AssignmentId);
+
+	// 창구 정산 확정 입력의 클라→서버 경계. 수락과 같은 이유로 폰이 대신 받는다.
+	UFUNCTION(Server, Reliable)
+	void Server_SettleQuestAssignment(int32 AssignmentId);
+
+	bool IsUIInputMode() const { return bUIInputMode; }
+
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-	UFUNCTION(Server, Reliable)
-	void Server_PostQuest(int32 QuestId);
-	
-	UFUNCTION(Server, Reliable)
-	void Server_UnpostQuest(int32 QuestId);
-	
-	UFUNCTION(Server, Reliable)
-	void Server_AcceptQuest(const TArray<int32>& QuestId, AAsteriaNpc* Npc);
-	
-	UPROPERTY(EditDefaultsOnly, Category = "UI")
-	TSubclassOf<UGuildMoneyWidget> GuildMoneyWidgetClass;
 };

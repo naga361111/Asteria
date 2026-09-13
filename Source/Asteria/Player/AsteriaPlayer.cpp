@@ -6,9 +6,36 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
-#include "GameState/AsteriaGameState.h"
 #include "Interaction/Interactable.h"
-#include "NPC/AsteriaNpc.h"
+#include "GameState/AsteriaGameState.h"
+#include "GameState/Components/CounterService.h"
+
+void AAsteriaPlayer::Server_AcceptQuestAssignment_Implementation(int32 AssignmentId)
+{
+	AAsteriaGameState* GameState = GetWorld()->GetGameState<AAsteriaGameState>();
+	UCounterService* CounterService = GameState ? GameState->CounterService : nullptr;
+	if (CounterService == nullptr) return;
+
+	// 여기는 전달만 한다. 실재·상태 검증은 소유자(QuestService)가 하고,
+	// 클라가 보낸 AssignmentId가 stale이면 그쪽에서 조용히 거절된다.
+	//
+	// TODO: "이 플레이어가 실제로 창구 앞에 있는가"는 아직 못 막는다.
+	// AAsteriaPlayer::OverlappedActor는 IsLocallyControlled 경로에서만 채워져 서버엔 없고,
+	// 창구를 식별할 타입도 아직 없다(BP_CounterActor는 C++ 타입이 없다).
+	// 상호작용 대상을 서버가 아는 계약이 서면 그때 여기서 막는다.
+	CounterService->AcceptQuestAssignment(AssignmentId);
+}
+
+void AAsteriaPlayer::Server_SettleQuestAssignment_Implementation(int32 AssignmentId)
+{
+	AAsteriaGameState* GameState = GetWorld()->GetGameState<AAsteriaGameState>();
+	UCounterService* CounterService = GameState ? GameState->CounterService : nullptr;
+	if (CounterService == nullptr) return;
+
+	// 수락과 같은 전달 전용 경로. 검증은 소유자(QuestService)가 한 벌로 한다.
+	// 창구 앞에 있는지 못 막는 것도 위와 같다.
+	CounterService->SettleQuestAssignment(AssignmentId);
+}
 
 // Sets default values
 AAsteriaPlayer::AAsteriaPlayer()
@@ -54,8 +81,32 @@ void AAsteriaPlayer::OnDetectionEndOverlap(UPrimitiveComponent* OverlappedComp, 
 	{
 		OverlappedActor = nullptr;
 
-		APlayerController* PC = GetController<APlayerController>();
-		PC->bShowMouseCursor = false;
+		// 범위를 벗어나면 열려 있던 UI 모드를 무조건 닫는다.
+		SetUIInputMode(false);
+	}
+}
+
+void AAsteriaPlayer::SetUIInputMode(bool bEnable)
+{
+	// 입력 모드/커서는 로컬 플레이어의 뷰포트 상태다. 서버나 원격 프록시에서 건드리지 않는다.
+	if (!IsLocallyControlled()) return;
+
+	APlayerController* PC = GetController<APlayerController>();
+	if (PC == nullptr) return;
+
+	bUIInputMode = bEnable;
+	PC->bShowMouseCursor = bEnable;
+
+	if (bEnable)
+	{
+		FInputModeGameAndUI Mode;
+		// 캡처될 때만 뷰포트에 가두고, 캡처 중에도 커서를 계속 보여준다.
+		Mode.SetLockMouseToViewportBehavior(EMouseLockMode::LockOnCapture);
+		Mode.SetHideCursorDuringCapture(false);
+		PC->SetInputMode(Mode);
+	}
+	else
+	{
 		PC->SetInputMode(FInputModeGameOnly());
 	}
 }
@@ -74,14 +125,6 @@ void AAsteriaPlayer::BeginPlay()
 			{
 				Subsystem->AddMappingContext(DefaultMappingContext, 0);
 			}
-		}
-	}
-
-	if (IsLocallyControlled())
-	{
-		if (UGuildMoneyWidget* Widget = CreateWidget<UGuildMoneyWidget>(GetWorld(), GuildMoneyWidgetClass))
-		{
-			Widget->AddToViewport();
 		}
 	}
 
@@ -134,24 +177,4 @@ void AAsteriaPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		EIC->BindAction(LookAction, ETriggerEvent::Triggered, this, &AAsteriaPlayer::Look);
 		EIC->BindAction(InteractAction, ETriggerEvent::Started, this, &AAsteriaPlayer::Interact);
 	}
-}
-
-void AAsteriaPlayer::Server_PostQuest_Implementation(int32 QuestId)
-{
-	GetWorld()->GetGameState<AAsteriaGameState>()->PostQuest(QuestId);
-}
-
-void AAsteriaPlayer::Server_UnpostQuest_Implementation(int32 QuestId)
-{
-	GetWorld()->GetGameState<AAsteriaGameState>()->UnpostQuest(QuestId);
-}
-
-void AAsteriaPlayer::Server_AcceptQuest_Implementation(const TArray<int32>& QuestId, AAsteriaNpc* Npc)
-{
-	GetWorld()->GetGameState<AAsteriaGameState>()->AcceptQuest(QuestId);
-	
-	Npc->AcceptedQuests.Append(Npc->SelectedQuests);
-	Npc->SelectedQuests.Empty();
-	
-	Npc->OnQuestAccepted.Broadcast();
 }
