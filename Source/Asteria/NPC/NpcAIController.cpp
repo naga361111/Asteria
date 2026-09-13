@@ -64,6 +64,7 @@ void ANpcAIController::OnPossess(APawn* InPawn)
 			{
 				BB->SetValueAsObject(FName("PostQuestBoard"), Npc->PostQuestBoardActor);
 				BB->SetValueAsObject(FName("GuildCounter"), Npc->GuildCounterActor);
+				BB->SetValueAsObject(FName("Dungeon"), Npc->DungeonActor);
 			}
 		}
 		RunBehaviorTree(BehaviorTree);

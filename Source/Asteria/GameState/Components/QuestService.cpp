@@ -114,6 +114,12 @@ bool UQuestService::AcceptQuestAssignment(int32 AssignmentId)
 	return true;
 }
 
+bool UQuestService::ClearQuestAssignment(int32 AssignmentId)
+{
+	return TransitionQuestAssignment(AssignmentId,
+		EQuestAssignmentState::Accepted, EQuestAssignmentState::Cleared) != nullptr;
+}
+
 bool UQuestService::IsQuestAssigned(int32 QuestId) const
 {
 	return QuestAssignments.ContainsByPredicate(
@@ -131,4 +137,10 @@ const FQuestAssignment* UQuestService::FindQuestAssignment(int32 AssignmentId) c
 {
 	return QuestAssignments.FindByPredicate(
 		[AssignmentId](const FQuestAssignment& C) { return C.AssignmentId == AssignmentId; });
+}
+
+const FQuestAssignment* UQuestService::FindQuestAssignmentByNpc(int32 NpcId, EQuestAssignmentState State) const
+{
+	return QuestAssignments.FindByPredicate(
+		[NpcId, State](const FQuestAssignment& C) { return C.State == State && C.Party.Contains(NpcId); });
 }

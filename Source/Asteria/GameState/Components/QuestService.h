@@ -66,6 +66,10 @@ public:
 	// 클라가 보낸 AssignmentId는 그 사이 사라졌거나 상태가 어긋났을 수 있으므로 여기서 다시 검증한다.
 	bool AcceptQuestAssignment(int32 AssignmentId);
 
+	// Accepted→Cleared. NPC가 수행을 마친다. 실행 경로는 던전 수행(BT) → 여기.
+	// terminal이므로 이후 어떤 전이도 성공하지 않는다(중복 완료는 From 검사에서 막힌다).
+	bool ClearQuestAssignment(int32 AssignmentId);
+
 	// --- 파생 질의: 상태에서 읽어낼 뿐 따로 저장하지 않는다 ---
 
 	// 가용성 파생의 단일 원천. 클라에서도 복제된 QuestAssignments를 읽어 동일 판정.
@@ -78,6 +82,11 @@ public:
 	// AssignmentId → Assignment 본체 역참조. 없으면 nullptr.
 	// 반환 포인터는 QuestAssignments가 바뀌면 무효다(재할당·복제 갱신) — 즉시 읽고 버릴 것.
 	const FQuestAssignment* FindQuestAssignment(int32 AssignmentId) const;
+
+	// NpcId → 그 NPC가 파티원인 Assignment. 없으면 nullptr. (BT가 "내 퀘스트가 뭐였지"를 묻는 경로)
+	// State를 반드시 받는 이유: 한 NPC가 단계가 다른 Assignment를 동시에 들 수 있어
+	// 단계를 안 좁히면 엉뚱한 걸 집는다. 반환 포인터 수명 주의는 위와 같다.
+	const FQuestAssignment* FindQuestAssignmentByNpc(int32 NpcId, EQuestAssignmentState State) const;
 
 private:
 	// 모든 전이의 공통 경로: 권위 확인 → 실재·현재 상태 확인 → 쓰기 → 변경 통지.

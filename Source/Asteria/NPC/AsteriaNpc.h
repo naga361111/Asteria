@@ -36,6 +36,9 @@ public:
 	UPROPERTY(EditInstanceOnly, Category="BehaviorTree")
 	AActor* GuildCounterActor;
 	
+	UPROPERTY(EditInstanceOnly, Category="BehaviorTree")
+	AActor* DungeonActor;
+	
 	UPROPERTY(EditDefaultsOnly, Category="Npc")
 	int32 NpcId = 0;
 };
