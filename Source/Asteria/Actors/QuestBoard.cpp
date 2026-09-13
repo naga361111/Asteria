@@ -5,6 +5,7 @@
 
 #include "GameState/AsteriaGameState.h"
 #include "GameState/Components/CounterService.h"
+#include "Player/AsteriaPlayer.h"
 
 
 // Sets default values
@@ -33,6 +34,11 @@ bool AQuestBoard::CanInteract() const
 
 void AQuestBoard::OnInteract(AAsteriaPlayer* Interactor)
 {
+	if (Interactor == nullptr) return;
+
+	// 커서 토글. 상태는 상호작용한 로컬 플레이어가 들고 있으므로 보드는 트리거만 한다.
+	Interactor->ToggleUIInputMode();
+
 	AAsteriaGameState* GS = GetWorld()->GetGameState<AAsteriaGameState>();
 	if (GS == nullptr) return;
 
@@ -42,5 +48,5 @@ void AQuestBoard::OnInteract(AAsteriaPlayer* Interactor)
 	UCounterService* Counter = GS->CounterService;
 	if (Counter == nullptr) return;
 	
-	UE_LOG(LogTemp, Warning, TEXT("Overlapped: %d"), Counter->SubmittedClaimIds.Num())
+	UE_LOG(LogTemp, Warning, TEXT("Toggle Success"))
 }

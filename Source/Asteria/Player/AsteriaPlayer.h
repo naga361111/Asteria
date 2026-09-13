@@ -61,7 +61,18 @@ protected:
 	
 	TWeakObjectPtr<AActor> OverlappedActor;
 
+	// UI 커서 상태는 로컬 클라 전용. 월드 액터가 아니라 로컬 플레이어가 소유한다.
+	bool bUIInputMode = false;
+
 public:
+	// 커서/입력 모드 전환. true면 GameAndUI + 커서 표시, false면 GameOnly + 커서 숨김.
+	void SetUIInputMode(bool bEnable);
+
+	// 현재 상태를 뒤집는다. 상호작용 토글용.
+	void ToggleUIInputMode() { SetUIInputMode(!bUIInputMode); }
+
+	bool IsUIInputMode() const { return bUIInputMode; }
+
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 

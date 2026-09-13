@@ -52,8 +52,32 @@ void AAsteriaPlayer::OnDetectionEndOverlap(UPrimitiveComponent* OverlappedComp, 
 	{
 		OverlappedActor = nullptr;
 
-		APlayerController* PC = GetController<APlayerController>();
-		PC->bShowMouseCursor = false;
+		// 범위를 벗어나면 열려 있던 UI 모드를 무조건 닫는다.
+		SetUIInputMode(false);
+	}
+}
+
+void AAsteriaPlayer::SetUIInputMode(bool bEnable)
+{
+	// 입력 모드/커서는 로컬 플레이어의 뷰포트 상태다. 서버나 원격 프록시에서 건드리지 않는다.
+	if (!IsLocallyControlled()) return;
+
+	APlayerController* PC = GetController<APlayerController>();
+	if (PC == nullptr) return;
+
+	bUIInputMode = bEnable;
+	PC->bShowMouseCursor = bEnable;
+
+	if (bEnable)
+	{
+		FInputModeGameAndUI Mode;
+		// 캡처될 때만 뷰포트에 가두고, 캡처 중에도 커서를 계속 보여준다.
+		Mode.SetLockMouseToViewportBehavior(EMouseLockMode::LockOnCapture);
+		Mode.SetHideCursorDuringCapture(false);
+		PC->SetInputMode(Mode);
+	}
+	else
+	{
 		PC->SetInputMode(FInputModeGameOnly());
 	}
 }
