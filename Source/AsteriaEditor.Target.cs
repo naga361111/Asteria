@@ -10,6 +10,6 @@ public class AsteriaEditorTarget : TargetRules
 		Type = TargetType.Editor;
 		DefaultBuildSettings = BuildSettingsVersion.V7;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_8;
-		ExtraModuleNames.Add("Asteria");
+		ExtraModuleNames.AddRange( new string[] { "Asteria", "AsteriaEditor" } );
 	}
 }
