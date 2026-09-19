@@ -24,9 +24,3 @@
 코드는 분명 맞는데 런타임 동작이 이상하면 **핫 리로드/Live Coding 더미를 먼저 의심**한다 — stale reinstanced 클래스(`REINST_`/`SKEL_`/`HOTRELOADED_`), 구 클래스를 참조하는 Blueprint, 반영 안 된 `UPROPERTY`/디폴트 등. **에디터 재시작 + 풀 리빌드**로 재현되는지 확인한 뒤에 코드 원인을 판다.
 
 ## 구현 TodoList
-
-* NpcAIController.cpp — 정리
-OnPossess의 SetValueAsObject 3줄 삭제(RunBehaviorTree만 남김)
-
-* AsteriaNpc.h — 정리
-PostQuestBoardActor/GuildCounterActor/DungeonActor 3개 제거(이제 미사용)
