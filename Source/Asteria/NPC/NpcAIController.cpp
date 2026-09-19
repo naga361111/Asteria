@@ -57,16 +57,6 @@ void ANpcAIController::OnPossess(APawn* InPawn)
 
 	if (BehaviorTree != nullptr)
 	{
-		UBlackboardComponent* BB = nullptr;
-		if (UseBlackboard(BehaviorTree->GetBlackboardAsset(), BB))
-		{
-			if (AAsteriaNpc* Npc = Cast<AAsteriaNpc>(InPawn))
-			{
-				BB->SetValueAsObject(FName("PostQuestBoard"), Npc->PostQuestBoardActor);
-				BB->SetValueAsObject(FName("GuildCounter"), Npc->GuildCounterActor);
-				BB->SetValueAsObject(FName("Dungeon"), Npc->DungeonActor);
-			}
-		}
 		RunBehaviorTree(BehaviorTree);
 	}
 }

@@ -30,15 +30,6 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	UPROPERTY(EditInstanceOnly, Category="BehaviorTree")
-	AActor* PostQuestBoardActor;
-	
-	UPROPERTY(EditInstanceOnly, Category="BehaviorTree")
-	AActor* GuildCounterActor;
-	
-	UPROPERTY(EditInstanceOnly, Category="BehaviorTree")
-	AActor* DungeonActor;
-	
 	UPROPERTY(EditDefaultsOnly, Category="Npc")
 	int32 NpcId = 0;
 };
