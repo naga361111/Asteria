@@ -27,6 +27,7 @@ void USettleTileEntryWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
 
 	AssignmentId = Entry->AssignmentId;
 	AssignmentIdText->SetText(FText::AsNumber(AssignmentId));
+	QuestIdText->SetText(FText::AsNumber(Entry->QuestId));
 }
 
 void USettleTileEntryWidget::HandleSettleClicked()

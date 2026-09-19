@@ -106,7 +106,10 @@ public:
 	bool IsQuestAssigned(int32 QuestId) const;
 
 	// 아직 안 집힌 퀘스트의 QuestId 하나. 없으면 INDEX_NONE. (BT의 "무엇을 집을까" 선택용)
-	int32 FindAvailableQuestId() const;
+	// MaxRank가 천장 — 자기보다 높은 등급은 안 뽑는다. 등급 단위 가중 추첨이라 동급을 크게 선호하되
+	// 낮은 확률로 아래 등급도 나오고, 등급 내 퀘스트 개수에는 휘둘리지 않는다.
+	// 내부 랜덤 때문에 서버에서만 의미 있는 호출(현재 유일 호출자는 BT).
+	int32 FindAvailableQuestId(ERank MaxRank) const;
 
 	// AssignmentId → Assignment 본체 역참조. 없으면 nullptr.
 	// 반환 포인터는 QuestAssignments가 바뀌면 무효다(재할당·복제 갱신) — 즉시 읽고 버릴 것.

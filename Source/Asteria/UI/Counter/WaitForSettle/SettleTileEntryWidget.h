@@ -36,7 +36,10 @@ protected:
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> AssignmentIdText;
-	
+
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> QuestIdText;
+
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> ButtonText;
 

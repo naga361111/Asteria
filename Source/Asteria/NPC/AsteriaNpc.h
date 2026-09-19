@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Common/Rank.h"
 #include "GameFramework/Character.h"
 #include "AsteriaNpc.generated.h"
 
@@ -32,4 +33,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category="Npc")
 	int32 NpcId = 0;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Npc")
+	ERank NpcRnk = ERank::F;
 };

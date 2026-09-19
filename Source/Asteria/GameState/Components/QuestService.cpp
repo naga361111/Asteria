@@ -41,8 +41,6 @@ void UQuestService::OnRep_QuestAssignments()
 
 int32 UQuestService::AssignQuest(int32 QuestId, const TArray<int32>& Party)
 {
-	UE_LOG(LogTemp, Warning, TEXT("AssignQuest Start: %d"), QuestAssignments.Num())
-	
 	// 소유·복제 방향 불변조건: 상태 변경은 호스트만.
 	if (!GetOwner() || !GetOwner()->HasAuthority())
 	{
@@ -188,11 +186,72 @@ bool UQuestService::IsQuestAssigned(int32 QuestId) const
 		[QuestId](const FQuestAssignment& C) { return C.QuestId == QuestId; });
 }
 
-int32 UQuestService::FindAvailableQuestId() const
+int32 UQuestService::FindAvailableQuestId(ERank MaxRank) const
 {
-	const FQuest* Quest = QuestPull.FindByPredicate(
-		[this](const FQuest& Q) { return !IsQuestAssigned(Q.QuestId); });
-	return Quest ? Quest->QuestId : INDEX_NONE;
+	const int32 Max = static_cast<int32>(MaxRank);
+
+	UE_LOG(LogTemp, Warning, TEXT("FindAvailableQuestId ENTER: MaxRank=%d"), Max);
+
+	// 1패스: 가용 퀘스트가 있는 등급마다 가중치를 딱 한 번 부여한다.
+	// 등급 단위로 확률을 매기는 게 핵심 — 이래야 아래 등급 퀘스트가 아무리 많아도
+	// 그 등급의 당첨 확률이 고정되어 보드 구성에 휘둘리지 않는다.
+	// ponytail: RankFalloff 하나가 꼬리 두께. 가파르면 거의 동급, 완만하면 아래도 자주.
+	constexpr float RankFalloff = 0.2f;
+	float TierWeight[static_cast<int32>(ERank::S) + 1] = {};
+	float TotalWeight = 0.f;
+	for (const FQuest& Q : QuestPull)
+	{
+		const int32 Rnk = static_cast<int32>(Q.QuestRnk);
+		if (Rnk > Max || IsQuestAssigned(Q.QuestId)) // 천장 + 이미 집힘
+		{
+			continue;
+		}
+		if (TierWeight[Rnk] == 0.f) // 이 등급 첫 발견 시에만
+		{
+			TierWeight[Rnk] = FMath::Pow(RankFalloff, static_cast<float>(Max - Rnk));
+			TotalWeight += TierWeight[Rnk];
+		}
+	}
+	if (TotalWeight == 0.f)
+	{
+		return INDEX_NONE;
+	}
+
+	// 등급 가중 추첨. PickedRnk를 매 가용 등급마다 갱신해 FP 잔차로 아무것도 안 뽑히는 걸 막는다.
+	float Roll = FMath::FRand() * TotalWeight;
+	int32 PickedRnk = INDEX_NONE;
+	for (int32 R = 0; R <= static_cast<int32>(ERank::S); ++R)
+	{
+		if (TierWeight[R] == 0.f)
+		{
+			continue;
+		}
+		PickedRnk = R;
+		Roll -= TierWeight[R];
+		if (Roll < 0.f)
+		{
+			break;
+		}
+	}
+
+	// 2패스: 뽑힌 등급 안에서 균등 랜덤(리저버 — 임시배열 없이 1패스).
+	int32 PickedId = INDEX_NONE;
+	int32 Seen = 0;
+	for (const FQuest& Q : QuestPull)
+	{
+		if (static_cast<int32>(Q.QuestRnk) != PickedRnk || IsQuestAssigned(Q.QuestId))
+		{
+			continue;
+		}
+		if (FMath::RandRange(0, Seen++) == 0)
+		{
+			PickedId = Q.QuestId;
+		}
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("FindAvailableQuestId EXIT: PickedRnk=%d PickedId=%d"), PickedRnk, PickedId);
+
+	return PickedId;
 }
 
 const FQuestAssignment* UQuestService::FindQuestAssignment(int32 AssignmentId) const

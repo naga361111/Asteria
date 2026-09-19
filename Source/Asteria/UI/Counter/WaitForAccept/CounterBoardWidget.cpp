@@ -87,6 +87,7 @@ void UCounterBoardWidget::RefreshSubmissions()
 
 		UCounterEntryObject* Entry = NewObject<UCounterEntryObject>(this);
 		Entry->AssignmentId = Assignment.AssignmentId;
+		Entry->QuestId = Assignment.QuestId;
 		SubmissionTileView->AddItem(Entry);
 	}
 }

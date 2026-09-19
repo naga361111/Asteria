@@ -90,6 +90,7 @@ void USettleBoardWidget::RefreshSettlements()
 
 		USettleEntryObject* Entry = NewObject<USettleEntryObject>(this);
 		Entry->AssignmentId = Assignment.AssignmentId;
+		Entry->QuestId = Assignment.QuestId;
 		SettlementTileView->AddItem(Entry);
 	}
 }
