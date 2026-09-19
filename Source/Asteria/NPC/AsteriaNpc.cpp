@@ -9,7 +9,11 @@ AAsteriaNpc::AAsteriaNpc()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	
+
+	// 서버 권위 → 클라 동기화. 이동은 CharacterMovement가 리플리케이트.
+	bReplicates = true;
+	SetReplicateMovement(true);
+
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 }
