@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Rank.h"
 #include "Quest.generated.h"
 
 // 퀘스트 정의. "무엇"만 담는다 — 진행 상태(누가·어디까지)는 FQuestAssignment가 소유한다.
@@ -11,6 +12,9 @@ struct FQuest
 
 	UPROPERTY(VisibleAnywhere)
 	int32 QuestId = INDEX_NONE;
+	
+	UPROPERTY(VisibleAnywhere)
+	ERank QuestRnk = ERank::F;
 };
 
 // Assignment의 생애 단계. 값을 가르는 축은 "다음에 움직여야 할 주체"다.

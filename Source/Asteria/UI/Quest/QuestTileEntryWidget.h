@@ -24,6 +24,9 @@ protected:
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> QuestIdText;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> QuestRnk;;
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> QuestTypeText;

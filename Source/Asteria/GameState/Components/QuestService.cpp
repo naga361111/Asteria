@@ -15,6 +15,7 @@ UQuestService::UQuestService()
 	{
 		FQuest Quest;
 		Quest.QuestId = QuestCount++;
+		Quest.QuestRnk = static_cast<ERank>(FMath::RandRange(0, static_cast<int32>(ERank::S)));
 		QuestPull.Add(Quest);
 	}
 }
