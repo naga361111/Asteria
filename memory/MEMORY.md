@@ -1,3 +1,7 @@
 - [Script folder organization](script-folder-organization.md) — 소스는 항상 폴더로 그룹화, 모듈 루트에 flat 금지
 - [Project direction](project-direction-guild-sim.md) — 코옵 모험가 길드 홀 시뮬(A형)로 스코프 축소 확정, 던전 추상·회색박스 코어부터
-- [Hearthvale kit & structure PCG](hearthvale-modular-kit-pcg.md) — 그리드 300/층고 300/Tavern_D 확정(개구부·계단이 구속조건), PCG_BuildingShell 셸 제너레이터와 소유 경계
+- [Debugging when code seems fine](<debugging when seems no error in code.md>) — 코드가 맞는데 동작이 이상하면 핫 리로드 더미부터 의심, 재시작+풀 리빌드로 재현 확인
+- [Answer in understandable words](answer%20in%20understandable%20words.md) — 생소한 전문 용어·함수명은 사전 설명 없이 쓰지 않기
+- [Only answer when task complete](only%20answer%20when%20task%20complete.md) — 작업 도중 출력 금지, 전부 끝난 뒤 핵심만 정리해 답변
+- [Write code explicitly mention only](write%20code%20explicitly%20mention%20only.md) — 명시적 구현 요청이 없으면 코드·파일을 자동 수정하지 않기
+- [Debugging when seems no error in code](debugging%20when%20seems%20no%20error%20in%20code.md) — 코드가 맞는데 동작이 이상하면 핫 리로드 더미부터 의심
