@@ -24,6 +24,11 @@ public class Asteria : ModuleRules
 			PrivateDependencyModuleNames.Add("GameplayDebugger");
 		}
 
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[] { "CQTest", "UnrealEd", "EngineSettings" });
+		}
+
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
 
