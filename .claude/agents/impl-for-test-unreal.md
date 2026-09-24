@@ -1,6 +1,6 @@
 ---
-name: impl-for-test-base
-description: impl-for-test/ 폴더의 E2E 테스트 스펙에서 지정된 한 단계만 구현하고 실행한다. /spec-for-test-base 명령이 단계마다 호출한다.
+name: impl-for-test-unreal
+description: impl-for-test/ 폴더의 E2E 테스트 스펙에서 지정된 한 단계만 구현하고 실행한다. /spec-for-test-unreal 명령이 단계마다 호출한다.
 tools: Read, Grep, Glob, Bash, Edit, Write
 model: opus
 ---
