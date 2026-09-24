@@ -39,6 +39,8 @@ public:
 			return;
 		}
 
+		LogTestSeparator();
+
 		UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();
 		MapName = EditorWorld->GetMapName();
 
@@ -98,6 +100,21 @@ public:
 		bFirstWrite = false;
 	}
 
+	// 두 번째 테스트부터 테스트 시작 때 로그 파일에만 빈 줄 하나를 남겨 테스트 사이를 구분한다.
+	// 실행의 첫 테스트 앞에는 남기지 않는다. 첫 테스트가 Log()로 파일을 새로 쓴 뒤이므로 이어 붙인다.
+	static void LogTestSeparator()
+	{
+		static bool bFirstTest = true;
+		if (bFirstTest)
+		{
+			bFirstTest = false;
+			return;
+		}
+		const FString Path = FPaths::ProjectSavedDir() / TEXT("TestLogs") / TEXT("AsteriaTest.log");
+		FFileHelper::SaveStringToFile(LINE_TERMINATOR, *Path, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM,
+			&IFileManager::Get(), FILEWRITE_Append);
+	}
+
 	// 확인 하나를 대상, 기대 값, 실제 값, 통과 여부 한 줄로 기록한다. 실패면 테스트 오류.
 	void LogCheck(const TCHAR* Role, const FString& Target, const FString& Expected, const FString& Actual, bool bPassed)
 	{
@@ -106,6 +123,39 @@ public:
 		{
 			TestRunner->AddError(FString::Printf(TEXT("[%s] %s 확인 실패, 기대 %s, 실제 %s"), Role, *Target, *Expected, *Actual));
 		}
+	}
+
+	// 에디터의 PIE 일시정지로 서버와 클라이언트 월드를 함께 멈추거나 재개하고, 각 월드의 정지 여부를 확인한다.
+	// 아직 얻지 못한 월드는 확인하지 않는다.
+	void SetGamePaused(bool bPaused)
+	{
+		GEditor->SetPIEWorldsPaused(bPaused);
+		Log(bPaused ? TEXT("[에디터] 게임 정지") : TEXT("[에디터] 게임 재개"));
+
+		const TCHAR* Expected = bPaused ? TEXT("정지") : TEXT("진행");
+		auto CheckWorld = [this, bPaused, Expected](const TCHAR* Role, const UWorld* World)
+		{
+			if (World == nullptr)
+			{
+				return;
+			}
+			const bool bWorldPaused = World->IsPaused();
+			LogCheck(Role, TEXT("게임 상태"), Expected, bWorldPaused ? TEXT("정지") : TEXT("진행"), bWorldPaused == bPaused);
+		};
+
+		CheckWorld(TEXT("서버"), ServerState ? ServerState->World : nullptr);
+		for (const TUniquePtr<FBasePIENetworkComponentState>& ClientState : ClientStates)
+		{
+			CheckWorld(TEXT("클라이언트"), ClientState ? ClientState->World : nullptr);
+		}
+	}
+
+	// 호출한 테스트의 단계 시작 지점에 게임 재개를, 테스트가 실패해도 실행되는 정리 단계에 게임 정지를 등록한다.
+	void ResumeGameUntilTestEnd()
+	{
+		CommandBuilder
+			->Then(TEXT("Resume Game"), [this]() { SetGamePaused(false); })
+			.OnTearDown(TEXT("Pause Game"), [this]() { SetGamePaused(true); });
 	}
 
 protected:

@@ -56,6 +56,8 @@ NETWORK_TEST_CLASS(AsteriaNpcSpawn, "Asteria.01_Npc.Spawn")
 
 	TEST_METHOD(ServerAndClient_SpawnOneNpcFromSpawner)
 	{
+		Network.ResumeGameUntilTestEnd();
+
 		const FTimespan EngineTimeout = NpcWaitTimeout * 2.0;
 
 		Network

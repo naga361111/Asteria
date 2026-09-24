@@ -14,6 +14,7 @@ NETWORK_TEST_CLASS(AsteriaNetworkSmoke, "Asteria.00_Base.Network")
 
 	TEST_METHOD(ServerAndClient_LoadCurrentMap)
 	{
+		Network.ResumeGameUntilTestEnd();
 	}
 };
 

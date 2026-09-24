@@ -128,6 +128,8 @@ NETWORK_TEST_CLASS(AsteriaNpcMove, "Asteria.02_Npc.MoveToQuestBoard")
 
 	TEST_METHOD(ServerAndClient_NpcMovesToQuestBoard)
 	{
+		Network.ResumeGameUntilTestEnd();
+
 		const FTimespan EngineTimeout = ArriveWaitTimeout * 2.0;
 
 		Network
