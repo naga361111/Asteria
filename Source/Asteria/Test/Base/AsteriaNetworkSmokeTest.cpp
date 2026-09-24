@@ -8,7 +8,7 @@
 #if ENABLE_PIE_NETWORK_TEST
 
 // 공통 기반이 서버와 클라이언트를 띄우고 현재 맵을 싣는지 로그로 확인하는 테스트.
-NETWORK_TEST_CLASS(AsteriaNetworkSmoke, "Asteria.Base.Network")
+NETWORK_TEST_CLASS(AsteriaNetworkSmoke, "Asteria.00_Base.Network")
 {
 	FAsteriaNetworkComponent Network{ TestRunner, TestCommandBuilder, bInitializing };
 

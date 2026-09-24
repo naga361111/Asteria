@@ -24,11 +24,14 @@
  *
  * 엔진 기본(FBasePIENetworkComponent)은 빈 새 맵을 만들어 띄우므로, 부모를 초기화 모드로 불러
  * 그 준비 단계를 막고 "Create New Map"만 뺀 같은 순서를 여기서 다시 등록한다.
+ *
+ * bLoadEnvironment가 false면 PIE를 다시 띄우지 않고 앞선 테스트가 띄운 PIE 세션을 그대로 쓴다.
+ * 어느 쪽이든 테스트가 끝나도 PIE는 끄지 않고 에디터 설정만 되돌려 다음 테스트가 같은 환경을 쓰게 한다.
  */
 class FAsteriaNetworkComponent : public FPIENetworkComponent<>
 {
 public:
-	FAsteriaNetworkComponent(FAutomationTestBase* InTestRunner, FTestCommandBuilder& InCommandBuilder, bool IsInitializing)
+	FAsteriaNetworkComponent(FAutomationTestBase* InTestRunner, FTestCommandBuilder& InCommandBuilder, bool IsInitializing, bool bLoadEnvironment = true)
 		: FPIENetworkComponent(InTestRunner, InCommandBuilder, true)
 	{
 		if (IsInitializing)
@@ -54,6 +57,19 @@ public:
 			.Build(*this);
 
 		FTimespan TimeoutValue = MakeTimeout(CQTest::DefaultTimeout);
+
+		// 환경을 다시 로드하지 않으면 떠 있는 PIE 세션의 월드와 접속 정보만 확보한다.
+		if (!bLoadEnvironment)
+		{
+			CommandBuilder
+				->Until(TEXT("Set Worlds"), [this]() { return SetWorlds(); }, TimeoutValue)
+				.Then(TEXT("Connect Clients to Server"), [this]() { ConnectClientsToServer(); })
+				.Until(TEXT("Await Clients Ready"), [this]() { return AwaitClientsReady(); }, TimeoutValue)
+				.Then(TEXT("Log Reused"), [this]() { LogReused(); })
+				.OnTearDown(TEXT("Restore Editor Settings"), [this]() { StateRestorer.Restore(); });
+			return;
+		}
+
 		CommandBuilder
 			->Do(TEXT("Stop PIE"), [this]() { StopPie(); })
 			.Then(TEXT("Start PIE"), [this]() { StartPie(); })
@@ -65,18 +81,9 @@ public:
 			// 캐릭터 대기는 스스로 TimeoutValue 뒤에 끝내므로 엔진 타임아웃은 그보다 넉넉하게 둔다.
 			.Until(TEXT("Await Characters Loaded"), [this, TimeoutValue]() { return AwaitCharactersLoaded(TimeoutValue); }, TimeoutValue * 2.0)
 			.Then(TEXT("Log Character Loaded"), [this]() { LogCharacterLoaded(); })
-			.OnTearDown(TEXT("Restore Editor State"), [this]() { RestoreState(); });
+			// PIE는 끄지 않고 게임 모드와 게임 인스턴스 설정만 되돌린다.
+			.OnTearDown(TEXT("Restore Editor Settings"), [this]() { StateRestorer.Restore(); });
 	}
-
-protected:
-	// 테스트 시작 시점에 에디터에 열려 있던 맵 이름.
-	FString MapName;
-
-	// 현재 맵 게임 모드의 기본 캐릭터 클래스. 캐릭터 로드 검증의 기준.
-	TSubclassOf<APawn> PawnClass;
-
-	// 캐릭터 대기를 시작한 시각. 대기 시간 초과 판단용.
-	FDateTime CharacterWaitStart;
 
 	// 테스트 로그 한 줄을 언리얼 로그와 Saved/TestLogs/AsteriaTest.log에 남긴다. 파일은 실행마다 새로 쓴다.
 	static void Log(const FString& Line)
@@ -91,7 +98,37 @@ protected:
 		bFirstWrite = false;
 	}
 
+	// 확인 하나를 대상, 기대 값, 실제 값, 통과 여부 한 줄로 기록한다. 실패면 테스트 오류.
+	void LogCheck(const TCHAR* Role, const FString& Target, const FString& Expected, const FString& Actual, bool bPassed)
+	{
+		Log(FString::Printf(TEXT("[%s] %s 기대 %s == %s 실제 %s (%s)"), Role, *Target, *Expected, *Target, *Actual, bPassed ? TEXT("통과") : TEXT("실패")));
+		if (!bPassed)
+		{
+			TestRunner->AddError(FString::Printf(TEXT("[%s] %s 확인 실패, 기대 %s, 실제 %s"), Role, *Target, *Expected, *Actual));
+		}
+	}
+
+protected:
+	// 테스트 시작 시점에 에디터에 열려 있던 맵 이름.
+	FString MapName;
+
+	// 현재 맵 게임 모드의 기본 캐릭터 클래스. 캐릭터 로드 검증의 기준.
+	TSubclassOf<APawn> PawnClass;
+
+	// 캐릭터 대기를 시작한 시각. 대기 시간 초과 판단용.
+	FDateTime CharacterWaitStart;
+
 private:
+	// 서버와 클라이언트가 앞선 테스트가 로드한 환경을 쓰고 있음을 각각 한 줄로 기록한다.
+	void LogReused()
+	{
+		Log(TEXT("[서버] 로드된 환경 사용"));
+		for (int32 Index = 0; Index < ClientStates.Num(); ++Index)
+		{
+			Log(TEXT("[클라이언트] 로드된 환경 사용"));
+		}
+	}
+
 	// 서버와 클라이언트가 MapName 맵을 실었는지 각각 한 줄로 기록한다. 다르면 테스트 오류.
 	void LogLoaded()
 	{
