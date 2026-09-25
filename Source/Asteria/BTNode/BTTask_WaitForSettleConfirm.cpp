@@ -14,8 +14,12 @@
 struct FBTWaitForSettleConfirmMemory
 {
 	TWeakObjectPtr<UQuestService> QuestService;
+	// 정산 확정 시 수수료를 입금할 곳.
+	TWeakObjectPtr<AAsteriaGameState> GameState;
 	FDelegateHandle SettledHandle;
 	int32 WaitingAssignmentId = INDEX_NONE;
+	// 이번 정산에서 길드에 들어갈 금액(RewardAmount * CommissionRate 반올림).
+	int32 Commission = 0;
 };
 
 UBTTask_WaitForSettleConfirm::UBTTask_WaitForSettleConfirm()
@@ -48,10 +52,18 @@ EBTNodeResult::Type UBTTask_WaitForSettleConfirm::ExecuteTask(UBehaviorTreeCompo
 	const FQuestAssignment* Assignment = Service->FindQuestAssignmentByNpc(Npc->NpcId, EQuestAssignmentState::Cleared);
 	if (Assignment == nullptr) return EBTNodeResult::Failed;
 
+	// 수수료 계산의 근거가 되는 퀘스트 정의. 못 찾으면 정산할 금액을 알 수 없다 → Failed.
+	const int32 QuestId = Assignment->QuestId;
+	const FQuest* Quest = Service->QuestPull.FindByPredicate(
+		[QuestId](const FQuest& Q) { return Q.QuestId == QuestId; });
+	if (Quest == nullptr) return EBTNodeResult::Failed;
+
 	FBTWaitForSettleConfirmMemory* Mem = CastInstanceNodeMemory<FBTWaitForSettleConfirmMemory>(NodeMemory);
 	Mem->QuestService = Service;
+	Mem->GameState = GS;
 	// 포인터가 아니라 id만 들고 간다 — QuestAssignments가 바뀌면 위 포인터는 그 즉시 무효.
 	Mem->WaitingAssignmentId = Assignment->AssignmentId;
+	Mem->Commission = FMath::RoundToInt(Quest->RewardAmount * Quest->CommissionRate);
 
 	// 밖에서 깨우고(QuestService가 SubmitForSettled→Settled 시 OnQuestAssignmentSettled.Broadcast) → 안에서 끝낸다(이 람다가 FinishLatentTask 호출).
 	// 브로드캐스트는 어느 Assignment든 오므로 내 AssignmentId만 필터.
@@ -61,6 +73,11 @@ EBTNodeResult::Type UBTTask_WaitForSettleConfirm::ExecuteTask(UBehaviorTreeCompo
 			if (SettledAssignmentId == Mem->WaitingAssignmentId)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("Assignment Settled: %d"), SettledAssignmentId)
+				// 수수료만 길드 지갑에 입금한다. NPC에게는 아무것도 주지 않는다.
+				if (Mem->GameState.IsValid())
+				{
+					Mem->GameState->AddGuildFunds(Mem->Commission);
+				}
 				FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 			}
 		});
@@ -87,7 +104,9 @@ void UBTTask_WaitForSettleConfirm::OnTaskFinished(UBehaviorTreeComponent& OwnerC
 	}
 	Mem->SettledHandle.Reset();
 	Mem->QuestService.Reset();
+	Mem->GameState.Reset();
 	Mem->WaitingAssignmentId = INDEX_NONE;
+	Mem->Commission = 0;
 
 	Super::OnTaskFinished(OwnerComp, NodeMemory, TaskResult);
 }

@@ -15,6 +15,14 @@ struct FQuest
 	
 	UPROPERTY(VisibleAnywhere)
 	ERank QuestRnk = ERank::F;
+
+	// 퀘스트 보상 액수. 등급별 범위 안에서 생성 시 정해진다.
+	UPROPERTY(VisibleAnywhere)
+	int32 RewardAmount = 0;
+
+	// 보상 중 길드가 가져가는 수수료 비율(0~1).
+	UPROPERTY(VisibleAnywhere)
+	float CommissionRate = 0.f;
 };
 
 // Assignment의 생애 단계. 값을 가르는 축은 "다음에 움직여야 할 주체"다.

@@ -5,6 +5,23 @@
 
 #include "Net/UnrealNetwork.h"
 
+namespace
+{
+	// 등급별 보상 액수 범위(최소~최대). ERank 순서(F..S)와 인덱스가 일치해야 한다.
+	constexpr int32 RewardRangeByRank[static_cast<int32>(ERank::S) + 1][2] = {
+		{ 10, 30 },     // F
+		{ 30, 80 },     // E
+		{ 80, 200 },    // D
+		{ 200, 500 },   // C
+		{ 500, 1200 },  // B
+		{ 1200, 3000 }, // A
+		{ 3000, 8000 }, // S
+	};
+
+	// 퀘스트마다 이 범위에서 수수료 비율을 뽑는다.
+	constexpr float MinCommissionRate = 0.1f;
+	constexpr float MaxCommissionRate = 0.3f;
+}
 
 // Sets default values for this component's properties
 UQuestService::UQuestService()
@@ -15,7 +32,10 @@ UQuestService::UQuestService()
 	{
 		FQuest Quest;
 		Quest.QuestId = QuestCount++;
-		Quest.QuestRnk = static_cast<ERank>(FMath::RandRange(0, static_cast<int32>(ERank::S)));
+		const int32 Rnk = FMath::RandRange(0, static_cast<int32>(ERank::S));
+		Quest.QuestRnk = static_cast<ERank>(Rnk);
+		Quest.RewardAmount = FMath::RandRange(RewardRangeByRank[Rnk][0], RewardRangeByRank[Rnk][1]);
+		Quest.CommissionRate = FMath::FRandRange(MinCommissionRate, MaxCommissionRate);
 		QuestPull.Add(Quest);
 	}
 }
