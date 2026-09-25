@@ -7,4 +7,4 @@
 - [Debugging when seems no error in code](debugging%20when%20seems%20no%20error%20in%20code.md) — 코드가 맞는데 동작이 이상하면 핫 리로드 더미부터 의심
 - [Hearthvale occlusion mask off](hearthvale-occlusion-mask.md) — 1인칭용으로 Hearthvale 재질 투명화 스위치를 꺼 둠, 에셋 폴더 git 미추적이라 재설치 시 재적용
 - [Unreal MCP set transform resets](unreal-mcp-set-transform-resets.md) — set_actor_transform은 빠진 회전·크기·위치를 초기화함, 항상 세 항목 모두 넘기기
-- [Guild hall map layout](guild-hall-map-layout.md) — NewScene 길드 홀: 접수처 중심, U자 복층 z=330(추가 콘텐츠용으로 비움), 좌표·태그 규칙
+- [Guild hall map layout](guild-hall-map-layout.md) — NewScene 길드 홀: 접수처 중심, U자 복층 바닥 z=430·천장 1100(복층은 추가 콘텐츠용으로 비움), 좌표·태그 규칙
