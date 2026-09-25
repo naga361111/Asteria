@@ -5,3 +5,4 @@
 - [Only answer when task complete](only%20answer%20when%20task%20complete.md) — 작업 도중 출력 금지, 전부 끝난 뒤 핵심만 정리해 답변
 - [Write code explicitly mention only](write%20code%20explicitly%20mention%20only.md) — 명시적 구현 요청이 없으면 코드·파일을 자동 수정하지 않기
 - [Debugging when seems no error in code](debugging%20when%20seems%20no%20error%20in%20code.md) — 코드가 맞는데 동작이 이상하면 핫 리로드 더미부터 의심
+- [Hearthvale occlusion mask off](hearthvale-occlusion-mask.md) — 1인칭용으로 Hearthvale 재질 투명화 스위치를 꺼 둠, 에셋 폴더 git 미추적이라 재설치 시 재적용
