@@ -3,6 +3,8 @@
 
 #include "QuestService.h"
 
+#include "GuildService.h"
+#include "GameState/AsteriaGameState.h"
 #include "Net/UnrealNetwork.h"
 
 namespace
@@ -21,23 +23,79 @@ namespace
 	// 퀘스트마다 이 범위에서 수수료 비율을 뽑는다.
 	constexpr float MinCommissionRate = 0.1f;
 	constexpr float MaxCommissionRate = 0.3f;
+
+	// 길드 등급에서 한 단계 내려갈 때마다 곱하는 무게 비율.
+	constexpr float LowerRankFalloff = 0.5f;
+	// 길드 등급 바로 위 한 단계의 무게. 그보다 위는 발행하지 않는다.
+	constexpr float UpperRankWeight = 0.3f;
+
+	// 길드 등급 기준 가중 추첨: 동급 1, 아래는 단계마다 LowerRankFalloff 배, 위 한 단계만 UpperRankWeight.
+	ERank RollQuestRank(ERank GuildRank)
+	{
+		const int32 Guild = static_cast<int32>(GuildRank);
+		const int32 Top = FMath::Min(Guild + 1, static_cast<int32>(ERank::S)); // S급 초과는 없다
+
+		float Weight[static_cast<int32>(ERank::S) + 1] = {};
+		float TotalWeight = 0.f;
+		for (int32 R = 0; R <= Top; ++R)
+		{
+			Weight[R] = R > Guild ? UpperRankWeight : FMath::Pow(LowerRankFalloff, static_cast<float>(Guild - R));
+			TotalWeight += Weight[R];
+		}
+
+		// PickedRnk를 매 등급마다 갱신해 FP 잔차로 아무것도 안 뽑히는 걸 막는다.
+		float Roll = FMath::FRand() * TotalWeight;
+		int32 PickedRnk = 0;
+		for (int32 R = 0; R <= Top; ++R)
+		{
+			PickedRnk = R;
+			Roll -= Weight[R];
+			if (Roll < 0.f)
+			{
+				break;
+			}
+		}
+		return static_cast<ERank>(PickedRnk);
+	}
 }
 
 // Sets default values for this component's properties
 UQuestService::UQuestService()
 {
 	SetIsReplicatedByDefault(true);
+}
 
+void UQuestService::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// 소유·복제 방향 불변조건: 발행은 호스트만. 클라는 복제된 QuestPull만 받는다.
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	const AAsteriaGameState* GameState = Cast<AAsteriaGameState>(GetOwner());
+	if (!GameState || !GameState->GuildService)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("QuestService: no owning GameState or GuildService. Quests not generated."));
+		return;
+	}
+
+	const ERank GuildRank = GameState->GuildService->GuildRank;
 	for (int i = 0; i < 50; ++i)
 	{
 		FQuest Quest;
 		Quest.QuestId = QuestCount++;
-		const int32 Rnk = FMath::RandRange(0, static_cast<int32>(ERank::S));
-		Quest.QuestRnk = static_cast<ERank>(Rnk);
+		Quest.QuestRnk = RollQuestRank(GuildRank);
+		const int32 Rnk = static_cast<int32>(Quest.QuestRnk);
 		Quest.RewardAmount = FMath::RandRange(RewardRangeByRank[Rnk][0], RewardRangeByRank[Rnk][1]);
 		Quest.CommissionRate = FMath::FRandRange(MinCommissionRate, MaxCommissionRate);
 		QuestPull.Add(Quest);
 	}
+
+	// 서버는 OnRep이 자동 호출되지 않으므로 직접 통지.
+	OnQuestPullChanged.Broadcast();
 }
 
 void UQuestService::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

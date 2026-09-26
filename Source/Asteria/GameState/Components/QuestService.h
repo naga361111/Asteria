@@ -120,6 +120,10 @@ public:
 	// 단계를 안 좁히면 엉뚱한 걸 집는다. 반환 포인터 수명 주의는 위와 같다.
 	const FQuestAssignment* FindQuestAssignmentByNpc(int32 NpcId, EQuestAssignmentState State) const;
 
+protected:
+	// 서버에서 길드 등급 기준으로 퀘스트를 생성한다. 클라는 복제된 QuestPull만 받는다.
+	virtual void BeginPlay() override;
+
 private:
 	// 모든 전이의 공통 경로: 권위 확인 → 실재·현재 상태 확인 → 쓰기 → 변경 통지.
 	// 전이마다 다른 건 From/To뿐이라 불변조건 검사를 한 벌로 유지한다.
