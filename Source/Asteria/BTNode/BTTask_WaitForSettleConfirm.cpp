@@ -9,6 +9,7 @@
 #include "GameState/Components/QuestService.h"
 #include "GameState/Components/CounterService.h"
 #include "GameState/Components/GuildService.h"
+#include "Data/GuildReputationData.h"
 
 // 이 태스크의 실행별 상태. 노드는 트리를 쓰는 모든 AI가 공유하는 단일 인스턴스라
 // 멤버 변수에 두면 서로 덮어쓴다 → NodeMemory에 담는다.
@@ -21,6 +22,8 @@ struct FBTWaitForSettleConfirmMemory
 	int32 WaitingAssignmentId = INDEX_NONE;
 	// 이번 정산에서 길드에 들어갈 금액(RewardAmount * CommissionRate 반올림).
 	int32 Commission = 0;
+	// 이번 정산에서 길드가 얻을 명성(퀘스트 등급 기준, ReputationData 표 조회).
+	int32 Reputation = 0;
 };
 
 UBTTask_WaitForSettleConfirm::UBTTask_WaitForSettleConfirm()
@@ -62,12 +65,18 @@ EBTNodeResult::Type UBTTask_WaitForSettleConfirm::ExecuteTask(UBehaviorTreeCompo
 		[QuestId](const FQuest& Q) { return Q.QuestId == QuestId; });
 	if (Quest == nullptr) return EBTNodeResult::Failed;
 
+	// 얻을 명성은 퀘스트 등급으로 명성 표에서 조회한다. 표가 없거나 등급이 빠져 있으면 적립할 값을 알 수 없다 → Failed.
+	if (Guild->ReputationData == nullptr) return EBTNodeResult::Failed;
+	const int32* Reputation = Guild->ReputationData->ReputationByQuestRank.Find(Quest->QuestRnk);
+	if (Reputation == nullptr) return EBTNodeResult::Failed;
+
 	FBTWaitForSettleConfirmMemory* Mem = CastInstanceNodeMemory<FBTWaitForSettleConfirmMemory>(NodeMemory);
 	Mem->QuestService = Service;
 	Mem->GuildService = Guild;
 	// 포인터가 아니라 id만 들고 간다 — QuestAssignments가 바뀌면 위 포인터는 그 즉시 무효.
 	Mem->WaitingAssignmentId = Assignment->AssignmentId;
 	Mem->Commission = FMath::RoundToInt(Quest->RewardAmount * Quest->CommissionRate);
+	Mem->Reputation = *Reputation;
 
 	// 밖에서 깨우고(QuestService가 SubmitForSettled→Settled 시 OnQuestAssignmentSettled.Broadcast) → 안에서 끝낸다(이 람다가 FinishLatentTask 호출).
 	// 브로드캐스트는 어느 Assignment든 오므로 내 AssignmentId만 필터.
@@ -77,10 +86,11 @@ EBTNodeResult::Type UBTTask_WaitForSettleConfirm::ExecuteTask(UBehaviorTreeCompo
 			if (SettledAssignmentId == Mem->WaitingAssignmentId)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("Assignment Settled: %d"), SettledAssignmentId)
-				// 수수료만 길드 지갑에 입금한다. NPC에게는 아무것도 주지 않는다.
+				// 수수료 입금과 명성 적립은 길드에만 한다. NPC에게는 아무것도 주지 않는다.
 				if (Mem->GuildService.IsValid())
 				{
 					Mem->GuildService->AddGuildFunds(Mem->Commission);
+					Mem->GuildService->AddGuildReputation(Mem->Reputation);
 				}
 				FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 			}
@@ -111,6 +121,7 @@ void UBTTask_WaitForSettleConfirm::OnTaskFinished(UBehaviorTreeComponent& OwnerC
 	Mem->GuildService.Reset();
 	Mem->WaitingAssignmentId = INDEX_NONE;
 	Mem->Commission = 0;
+	Mem->Reputation = 0;
 
 	Super::OnTaskFinished(OwnerComp, NodeMemory, TaskResult);
 }
