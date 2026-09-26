@@ -206,15 +206,35 @@ bool UQuestService::SubmitForSettleQuestAssignment(int32 AssignmentId)
 
 bool UQuestService::SettleQuestAssignment(int32 AssignmentId)
 {
-	if (TransitionQuestAssignment(AssignmentId,
-		EQuestAssignmentState::SubmitForSettled, EQuestAssignmentState::Settled) == nullptr)
+	const FQuestAssignment* Settled = TransitionQuestAssignment(AssignmentId,
+		EQuestAssignmentState::SubmitForSettled, EQuestAssignmentState::Settled);
+	if (Settled == nullptr)
 	{
 		return false;
 	}
+	// 반환 포인터는 배열이 바뀌면 무효 — 제거에 쓸 QuestId를 먼저 복사해 둔다.
+	const int32 QuestId = Settled->QuestId;
 
 	// 정산을 기다리며 멈춰 있는 NPC를 깨운다. 서버 로컬 신호라 여기서만 발화한다.
 	// (AcceptQuestAssignment가 OnQuestAssignmentAccepted를 쏘는 것과 같은 자리)
+	// 동기 Broadcast라 구독자(BT 람다)의 수수료·명성 지급이 아래 제거보다 먼저 끝난다.
 	OnQuestAssignmentSettled.Broadcast(AssignmentId);
+
+	// 정산이 끝났으니 Assignment와 퀘스트를 배열에서 지운다. 보상 근거는 위 통지로 이미 소비됐다.
+	if (QuestAssignments.RemoveAll(
+		[AssignmentId](const FQuestAssignment& C) { return C.AssignmentId == AssignmentId; }) > 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Assignment Removed: %d"), AssignmentId);
+	}
+	if (QuestPull.RemoveAll(
+		[QuestId](const FQuest& Q) { return Q.QuestId == QuestId; }) > 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Quest Removed: %d"), QuestId);
+	}
+
+	// 서버는 OnRep이 자동 호출되지 않으므로 직접 통지.
+	OnQuestAssignmentsChanged.Broadcast();
+	OnQuestPullChanged.Broadcast();
 
 	return true;
 }

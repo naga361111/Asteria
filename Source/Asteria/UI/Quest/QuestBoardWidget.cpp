@@ -16,7 +16,7 @@ void UQuestBoardWidget::NativeConstruct()
 		if (UQuestService* Service = GS->QuestService)
 		{
 			// 표시 상태는 QuestPull(무엇) + QuestAssignments(집힘 여부)의 join이라 둘 다 구독한다.
-			// 현재 흐름에선 QuestPull은 정적이고 실제 갱신은 QuestAssignments 변경에서 온다.
+			// QuestPull은 정산이 확정될 때 해당 퀘스트가 제거되며 바뀌고, 나머지 갱신은 QuestAssignments 변경에서 온다.
 			Service->OnQuestPullChanged.AddUObject(this, &UQuestBoardWidget::RefreshQuests);
 			Service->OnQuestAssignmentsChanged.AddUObject(this, &UQuestBoardWidget::RefreshQuests);
 			RefreshQuests();

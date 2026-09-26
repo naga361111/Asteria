@@ -95,6 +95,8 @@ public:
 	bool SubmitForSettleQuestAssignment(int32 AssignmentId);
 
 	// SubmitForSettled→Settled. 플레이어가 창구에서 정산을 확정한다. 유일한 terminal 전이다.
+	// 정산 통지 직후 그 Assignment는 QuestAssignments에서, 해당 퀘스트는 QuestPull에서 제거된다.
+	// 전이가 실패하면(권위 없음/미존재/상태 불일치) 아무것도 지우지 않는다.
 	// 입력 경로는 정산 UI 버튼 → 플레이어(소유 액터)의 Server RPC → CounterService → 여기.
 	// AcceptQuestAssignment와 같은 이유로 클라가 보낸 AssignmentId를 여기서 다시 검증한다.
 	bool SettleQuestAssignment(int32 AssignmentId);
