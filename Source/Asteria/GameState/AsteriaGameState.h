@@ -9,6 +9,7 @@
 class UCounterService;
 class UQuestService;
 class UGuildService;
+class UGameClockService;
 
 /**
  *
@@ -29,4 +30,7 @@ public:
 
 	UPROPERTY(VisibleAnywhere, Category="Guild")
 	TObjectPtr<UGuildService> GuildService;
+
+	UPROPERTY(VisibleAnywhere, Category="Time")
+	TObjectPtr<UGameClockService> GameClockService;
 };

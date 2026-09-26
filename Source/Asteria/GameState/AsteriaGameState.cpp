@@ -6,10 +6,12 @@
 #include "GameState/Components/QuestService.h"
 #include "GameState/Components/CounterService.h"
 #include "GameState/Components/GuildService.h"
+#include "GameState/Components/GameClockService.h"
 
 AAsteriaGameState::AAsteriaGameState()
 {
 	QuestService = CreateDefaultSubobject<UQuestService>(TEXT("QuestService"));
 	CounterService = CreateDefaultSubobject<UCounterService>(TEXT("CounterService"));
 	GuildService = CreateDefaultSubobject<UGuildService>(TEXT("GuildService"));
+	GameClockService = CreateDefaultSubobject<UGameClockService>(TEXT("GameClockService"));
 }
