@@ -8,6 +8,7 @@
 #include "GameState/AsteriaGameState.h"
 #include "GameState/Components/QuestService.h"
 #include "GameState/Components/CounterService.h"
+#include "GameState/Components/GuildService.h"
 
 // 이 태스크의 실행별 상태. 노드는 트리를 쓰는 모든 AI가 공유하는 단일 인스턴스라
 // 멤버 변수에 두면 서로 덮어쓴다 → NodeMemory에 담는다.
@@ -15,7 +16,7 @@ struct FBTWaitForSettleConfirmMemory
 {
 	TWeakObjectPtr<UQuestService> QuestService;
 	// 정산 확정 시 수수료를 입금할 곳.
-	TWeakObjectPtr<AAsteriaGameState> GameState;
+	TWeakObjectPtr<UGuildService> GuildService;
 	FDelegateHandle SettledHandle;
 	int32 WaitingAssignmentId = INDEX_NONE;
 	// 이번 정산에서 길드에 들어갈 금액(RewardAmount * CommissionRate 반올림).
@@ -47,6 +48,9 @@ EBTNodeResult::Type UBTTask_WaitForSettleConfirm::ExecuteTask(UBehaviorTreeCompo
 	UCounterService* Counter = GS->CounterService;
 	if (Counter == nullptr) return EBTNodeResult::Failed;
 
+	UGuildService* Guild = GS->GuildService;
+	if (Guild == nullptr) return EBTNodeResult::Failed;
+
 	// 내가 올릴 Assignment = 내 NpcId가 파티에 있고 수행을 마친(Cleared) 것.
 	// 상태로 좁히지 않으면 아직 수행 중인 것·이미 올린 것까지 집는다.
 	const FQuestAssignment* Assignment = Service->FindQuestAssignmentByNpc(Npc->NpcId, EQuestAssignmentState::Cleared);
@@ -60,7 +64,7 @@ EBTNodeResult::Type UBTTask_WaitForSettleConfirm::ExecuteTask(UBehaviorTreeCompo
 
 	FBTWaitForSettleConfirmMemory* Mem = CastInstanceNodeMemory<FBTWaitForSettleConfirmMemory>(NodeMemory);
 	Mem->QuestService = Service;
-	Mem->GameState = GS;
+	Mem->GuildService = Guild;
 	// 포인터가 아니라 id만 들고 간다 — QuestAssignments가 바뀌면 위 포인터는 그 즉시 무효.
 	Mem->WaitingAssignmentId = Assignment->AssignmentId;
 	Mem->Commission = FMath::RoundToInt(Quest->RewardAmount * Quest->CommissionRate);
@@ -74,9 +78,9 @@ EBTNodeResult::Type UBTTask_WaitForSettleConfirm::ExecuteTask(UBehaviorTreeCompo
 			{
 				UE_LOG(LogTemp, Warning, TEXT("Assignment Settled: %d"), SettledAssignmentId)
 				// 수수료만 길드 지갑에 입금한다. NPC에게는 아무것도 주지 않는다.
-				if (Mem->GameState.IsValid())
+				if (Mem->GuildService.IsValid())
 				{
-					Mem->GameState->AddGuildFunds(Mem->Commission);
+					Mem->GuildService->AddGuildFunds(Mem->Commission);
 				}
 				FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 			}
@@ -104,7 +108,7 @@ void UBTTask_WaitForSettleConfirm::OnTaskFinished(UBehaviorTreeComponent& OwnerC
 	}
 	Mem->SettledHandle.Reset();
 	Mem->QuestService.Reset();
-	Mem->GameState.Reset();
+	Mem->GuildService.Reset();
 	Mem->WaitingAssignmentId = INDEX_NONE;
 	Mem->Commission = 0;
 
