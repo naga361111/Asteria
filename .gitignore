@@ -53,6 +53,10 @@ Content/Collections/
 Content/Hearthvale/
 Content/__ExternalActors__/Hearthvale/
 Content/__ExternalObjects__/Hearthvale/
+Content/Stylized_Spruce_Forest/
+Content/__ExternalActors__/Stylized_Spruce_Forest/
+Content/__ExternalObjects__/Stylized_Spruce_Forest/
+STZD_Spruce_Forest.png
 
 # Crash reports and memory dumps
 *.dmp
