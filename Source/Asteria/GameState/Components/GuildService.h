@@ -9,6 +9,9 @@
 
 class UGuildReputationData;
 
+// GuildFunds가 바뀌었음을 알리는 신호. 서버는 AddGuildFunds에서, 클라는 OnRep에서 Broadcast한다.
+DECLARE_MULTICAST_DELEGATE(FOnGuildFundsChanged);
+
 /**
  * 길드 자체의 상태(자금·등급)를 소유한다. 쓰기는 서버 권위, 클라는 복제된 값을 읽기만 한다.
  */
@@ -23,8 +26,14 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// 길드 공통 지갑 잔액. 쓰기는 서버 권위(AddGuildFunds), 클라는 복제된 값을 읽기만 한다.
-	UPROPERTY(VisibleAnywhere, Replicated, Category="Guild")
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_GuildFunds, Category="Guild")
 	int32 GuildFunds = 0;
+
+	UFUNCTION()
+	void OnRep_GuildFunds();
+
+	// GuildFunds가 바뀌면 Broadcast. GuildFundsWidget이 구독한다.
+	FOnGuildFundsChanged OnGuildFundsChanged;
 
 	// 길드 등급. 쓰기는 서버 권위.
 	UPROPERTY(VisibleAnywhere, Replicated, Category="Guild")

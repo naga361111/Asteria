@@ -21,6 +21,11 @@ void UGuildService::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(UGuildService, GuildReputation);
 }
 
+void UGuildService::OnRep_GuildFunds()
+{
+	OnGuildFundsChanged.Broadcast();
+}
+
 bool UGuildService::AddGuildFunds(int32 Amount)
 {
 	if (!GetOwner() || !GetOwner()->HasAuthority() || Amount <= 0)
@@ -29,6 +34,8 @@ bool UGuildService::AddGuildFunds(int32 Amount)
 	}
 
 	GuildFunds += Amount;
+	// 서버(호스트)에선 OnRep이 불리지 않으므로 직접 통지한다.
+	OnGuildFundsChanged.Broadcast();
 	return true;
 }
 
