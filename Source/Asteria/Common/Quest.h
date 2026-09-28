@@ -34,7 +34,7 @@ struct FQuest
 // 해제(반려·포기·NPC 소멸)는 상태 값이 아니라 QuestAssignments 배열에서의 제거로 표현한다.
 // 그래서 "중단"에는 terminal 값이 없고, 퀘스트 가용성이 "살아있는 Assignment의 존재"로 계속 파생된다.
 // 완수 이후(Cleared·SubmitForSettled)는 값으로 남긴다 — 보상·평판 정산의 근거가 정산 전에 사라지면 안 되기 때문.
-// 정산이 확정되면(Settled) 보상 지급 직후 Assignment와 그 퀘스트가 배열에서 제거된다.
+// NPC가 창구에서 수령하면(Settled) 보상 지급 직후 Assignment와 그 퀘스트가 배열에서 제거된다.
 UENUM()
 enum class EQuestAssignmentState : uint8
 {
@@ -50,8 +50,11 @@ enum class EQuestAssignmentState : uint8
 	Cleared,
 	// 카운터의 보상 대기 제출함에 올라갔다 - 다음 행위자는 플레이어.
 	SubmitForSettled,
-	// 창구에서 보상·평판까지 정산됐다. 다음 행위자가 없는 유일한 terminal 값 — 여기서 더 전이하지 않는다.
-	// 정산 확정 직후 배열에서 제거되므로 QuestAssignments에 이 값으로 남아 있지 않다.
+	// 플레이어가 정산 컨펌 신호를 보냈고 NPC의 창구 수령을 기다림 — 다음 행위자는 NPC(수령).
+	// 컨펌 신호의 기록이라 보드 표시·중복 컨펌 차단·신호 유실 방지의 근거가 된다.
+	SettleConfirmed,
+	// NPC가 창구에서 수령해 보상·명성까지 정산됐다. 다음 행위자가 없는 유일한 terminal 값 — 여기서 더 전이하지 않는다.
+	// 전이 직후 배열에서 제거되므로 QuestAssignments에 이 값으로 남아 있지 않다.
 	Settled,
 };
 

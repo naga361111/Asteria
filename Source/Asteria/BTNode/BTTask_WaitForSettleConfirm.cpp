@@ -4,40 +4,61 @@
 #include "BTTask_WaitForSettleConfirm.h"
 
 #include "AIController.h"
+#include "GameFramework/Pawn.h"
+#include "BehaviorTree/BehaviorTreeComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "NPC/AsteriaNpc.h"
 #include "GameState/AsteriaGameState.h"
 #include "GameState/Components/QuestService.h"
-#include "GameState/Components/CounterService.h"
-#include "GameState/Components/GuildService.h"
-#include "Data/GuildReputationData.h"
 
-// 이 태스크의 실행별 상태. 노드는 트리를 쓰는 모든 AI가 공유하는 단일 인스턴스라
-// 멤버 변수에 두면 서로 덮어쓴다 → NodeMemory에 담는다.
-struct FBTWaitForSettleConfirmMemory
+namespace
 {
-	TWeakObjectPtr<UQuestService> QuestService;
-	// 정산 확정 시 수수료를 입금할 곳.
-	TWeakObjectPtr<UGuildService> GuildService;
-	FDelegateHandle SettledHandle;
-	int32 WaitingAssignmentId = INDEX_NONE;
-	// 이번 정산에서 길드에 들어갈 금액(RewardAmount * CommissionRate 반올림).
-	int32 Commission = 0;
-	// 이번 정산에서 길드가 얻을 명성(퀘스트 등급 기준, ReputationData 표 조회).
-	int32 Reputation = 0;
-};
+	// NPC 기준 해당 종류의 가장 가까운 접근 지점(2D 거리). 없으면 null.
+	// WaitForConfirmQuest.cpp의 FindNearestWaitPoint와 같은 탐색. unity 빌드에서 익명 네임스페이스 이름이 겹치지 않게 이름을 달리한다.
+	AApproachPointActor* FindNearestSettleWaitPoint(UWorld* World, EApproachPointType Type, const FVector& Origin)
+	{
+		TArray<AActor*> Points;
+		UGameplayStatics::GetAllActorsOfClass(World, AApproachPointActor::StaticClass(), Points);
+
+		AApproachPointActor* Best = nullptr;
+		float BestDistSq = TNumericLimits<float>::Max();
+		for (AActor* Actor : Points)
+		{
+			AApproachPointActor* Point = Cast<AApproachPointActor>(Actor);
+			if (Point == nullptr || Point->PointType != Type)
+			{
+				continue;
+			}
+
+			const float DistSq = FVector::DistSquared2D(Origin, Point->GetActorLocation());
+			if (DistSq < BestDistSq)
+			{
+				BestDistSq = DistSq;
+				Best = Point;
+			}
+		}
+		return Best;
+	}
+}
 
 UBTTask_WaitForSettleConfirm::UBTTask_WaitForSettleConfirm()
 {
 	NodeName = TEXT("Wait For Settle Confirm");
 
-	// bNotifyTaskFinished는 기본 false다 — 안 켜면 OnTaskFinished가 호출되지 않아
-	// 아래에서 거는 구독이 영영 해제되지 않는다(실행할 때마다 람다가 쌓인다).
-	INIT_TASK_NODE_NOTIFY_FLAGS();
+	// 실행 중 상태(이동·회전·구독)를 멤버에 저장하므로 트리 컴포넌트마다 별도 인스턴스가 필요하다.
+	bCreateNodeInstance = true;
+
+	// 회전 페이즈에서만 틱을 사용한다.
+	bNotifyTick = true;
+
+	// 성공/실패/Abort 공통 정리를 OnTaskFinished에서 한다.
+	bNotifyTaskFinished = true;
 }
 
 EBTNodeResult::Type UBTTask_WaitForSettleConfirm::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
 	// BT는 서버에서만 도는 전제. 월드/NpcId는 OwnerComp의 AI 오너·폰에서 얻는다.
+	// (노드의 GetWorld()는 Outer가 월드가 아니라 신뢰 불가)
 	AAIController* AICon = OwnerComp.GetAIOwner();
 	AAsteriaNpc* Npc = AICon ? Cast<AAsteriaNpc>(AICon->GetPawn()) : nullptr;
 	if (Npc == nullptr) return EBTNodeResult::Failed;
@@ -48,97 +69,185 @@ EBTNodeResult::Type UBTTask_WaitForSettleConfirm::ExecuteTask(UBehaviorTreeCompo
 	UQuestService* Service = GS->QuestService;
 	if (Service == nullptr) return EBTNodeResult::Failed;
 
-	UCounterService* Counter = GS->CounterService;
-	if (Counter == nullptr) return EBTNodeResult::Failed;
+	// 내가 기다릴 Assignment = 내 NpcId가 파티에 있고 보상 대기 제출함에 올라간(SubmitForSettled) 것.
+	const FQuestAssignment* Assignment = Service->FindQuestAssignmentByNpc(Npc->NpcId, EQuestAssignmentState::SubmitForSettled);
+	if (Assignment == nullptr)
+	{
+		// 제출과 대기 사이에 이미 컨펌됐으면 기다릴 것 없이 성공(이동 없음). 둘 다 없으면 기다릴 대상이 없다.
+		return Service->FindQuestAssignmentByNpc(Npc->NpcId, EQuestAssignmentState::SettleConfirmed)
+			? EBTNodeResult::Succeeded
+			: EBTNodeResult::Failed;
+	}
 
-	UGuildService* Guild = GS->GuildService;
-	if (Guild == nullptr) return EBTNodeResult::Failed;
-
-	// 내가 올릴 Assignment = 내 NpcId가 파티에 있고 수행을 마친(Cleared) 것.
-	// 상태로 좁히지 않으면 아직 수행 중인 것·이미 올린 것까지 집는다.
-	const FQuestAssignment* Assignment = Service->FindQuestAssignmentByNpc(Npc->NpcId, EQuestAssignmentState::Cleared);
-	if (Assignment == nullptr) return EBTNodeResult::Failed;
-
-	// 수수료 계산의 근거가 되는 퀘스트 정의. 못 찾으면 정산할 금액을 알 수 없다 → Failed.
-	const int32 QuestId = Assignment->QuestId;
-	const FQuest* Quest = Service->QuestPull.FindByPredicate(
-		[QuestId](const FQuest& Q) { return Q.QuestId == QuestId; });
-	if (Quest == nullptr) return EBTNodeResult::Failed;
-
-	// 얻을 명성은 퀘스트 등급으로 명성 표에서 조회한다. 표가 없거나 등급이 빠져 있으면 적립할 값을 알 수 없다 → Failed.
-	if (Guild->ReputationData == nullptr) return EBTNodeResult::Failed;
-	const int32* Reputation = Guild->ReputationData->ReputationByQuestRank.Find(Quest->QuestRnk);
-	if (Reputation == nullptr) return EBTNodeResult::Failed;
-
-	FBTWaitForSettleConfirmMemory* Mem = CastInstanceNodeMemory<FBTWaitForSettleConfirmMemory>(NodeMemory);
-	Mem->QuestService = Service;
-	Mem->GuildService = Guild;
+	QuestService = Service;
 	// 포인터가 아니라 id만 들고 간다 — QuestAssignments가 바뀌면 위 포인터는 그 즉시 무효.
-	Mem->WaitingAssignmentId = Assignment->AssignmentId;
-	Mem->Commission = FMath::RoundToInt(Quest->RewardAmount * Quest->CommissionRate);
-	Mem->Reputation = *Reputation;
+	WaitingAssignmentId = Assignment->AssignmentId;
+	CachedOwnerComp = &OwnerComp;
+	bFacing = false;
 
-	// 밖에서 깨우고(QuestService가 SubmitForSettled→Settled 시 OnQuestAssignmentSettled.Broadcast) → 안에서 끝낸다(이 람다가 FinishLatentTask 호출).
+	// 밖에서 깨우고(QuestService가 SubmitForSettled→SettleConfirmed 시 OnQuestAssignmentSettled.Broadcast) → 안에서 끝낸다(이 람다가 FinishLatentTask 호출).
 	// 브로드캐스트는 어느 Assignment든 오므로 내 AssignmentId만 필터.
-	Mem->SettledHandle = Service->OnQuestAssignmentSettled.AddLambda(
-		[this, &OwnerComp, Mem](int32 SettledAssignmentId)
+	// 이동 중이든 도착 후든 즉시 끝낸다 — 걸어가던 이동은 OnTaskFinished가 멈춘다.
+	SettledHandle = Service->OnQuestAssignmentSettled.AddLambda(
+		[this, &OwnerComp](int32 SettledAssignmentId)
 		{
-			if (SettledAssignmentId == Mem->WaitingAssignmentId)
+			if (SettledAssignmentId == WaitingAssignmentId)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("Assignment Settled: %d"), SettledAssignmentId)
-				// 수수료 입금과 명성 적립은 길드에만 한다. NPC에게는 아무것도 주지 않는다.
-				if (Mem->GuildService.IsValid())
-				{
-					Mem->GuildService->AddGuildFunds(Mem->Commission);
-					Mem->GuildService->AddGuildReputation(Mem->Reputation);
-				}
+				UE_LOG(LogTemp, Warning, TEXT("Assignment Settle Confirmed: %d"), SettledAssignmentId)
 				FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 			}
 		});
 
-	// 구독을 먼저, 제출은 그 다음 — 순서가 바뀌면 제출 직후의 정산 확정을 놓친다.
-	// 실패하면 기다릴 이유가 없다 → Failed. (구독 해제는 OnTaskFinished가 책임)
-	if (!Counter->SubmitForSettleQuestAssignment(Mem->WaitingAssignmentId))
+	UE_LOG(LogTemp, Warning, TEXT("Wait For Assignment:%d Settle"), WaitingAssignmentId)
+
+	// 대기 지점 탐색. 대기 자리는 연출이라 지점이 없어도 실패하지 않고 제자리에서 기다린다.
+	TargetPoint = FindNearestSettleWaitPoint(Npc->GetWorld(), TargetType, Npc->GetActorLocation());
+	if (TargetPoint == nullptr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("SubmitForSettleQuestAssignment failed. Assignment:%d"), Mem->WaitingAssignmentId)
-		return EBTNodeResult::Failed;
+		UE_LOG(LogTemp, Warning, TEXT("No wait point found. Waiting in place. Assignment:%d"), WaitingAssignmentId)
+		return EBTNodeResult::InProgress;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Wait For Assignment:%d Settle"), Mem->WaitingAssignmentId)
+	// 대기 지점으로 이동 요청.
+	const EPathFollowingRequestResult::Type MoveResult = AICon->MoveToActor(TargetPoint, AcceptableRadius);
+	switch (MoveResult)
+	{
+	case EPathFollowingRequestResult::Failed:
+		UE_LOG(LogTemp, Warning, TEXT("Move to wait point failed. Waiting in place. Assignment:%d"), WaitingAssignmentId)
+		break;
+
+	case EPathFollowingRequestResult::AlreadyAtGoal:
+		// 이미 도착 → 바로 회전 페이즈로.
+		if (InterpSpeed <= 0.0f)
+		{
+			Npc->SetActorRotation(FRotator(0.0f, TargetPoint->GetActorRotation().Yaw, 0.0f));
+		}
+		else
+		{
+			bFacing = true;
+		}
+		break;
+
+	case EPathFollowingRequestResult::RequestSuccessful:
+	default:
+		MoveRequestID = AICon->GetCurrentMoveRequestID();
+		AICon->ReceiveMoveCompleted.AddDynamic(this, &UBTTask_WaitForSettleConfirm::OnMoveCompleted);
+		break;
+	}
 	return EBTNodeResult::InProgress;
+}
+
+void UBTTask_WaitForSettleConfirm::OnMoveCompleted(FAIRequestID RequestID, EPathFollowingResult::Type Result)
+{
+	// 이전 실행의 스테일 콜백 무시.
+	if (!RequestID.IsEquivalent(MoveRequestID))
+	{
+		return;
+	}
+
+	UBehaviorTreeComponent* OwnerComp = CachedOwnerComp.Get();
+	if (OwnerComp == nullptr)
+	{
+		return;
+	}
+
+	UnbindMoveCompleted();
+
+	// 도착 실패(막힘·중단 등)여도 태스크를 끝내지 않고 제자리에서 컨펌을 기다린다.
+	if (Result != EPathFollowingResult::Success)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Move to wait point failed. Waiting in place. Assignment:%d"), WaitingAssignmentId)
+		return;
+	}
+
+	APawn* Pawn = OwnerComp->GetAIOwner() ? OwnerComp->GetAIOwner()->GetPawn() : nullptr;
+	if (Pawn == nullptr || TargetPoint == nullptr)
+	{
+		return;
+	}
+
+	// 회전 페이즈 진입. 보간 모드는 TickTask가 마무리한다.
+	if (InterpSpeed <= 0.0f)
+	{
+		Pawn->SetActorRotation(FRotator(0.0f, TargetPoint->GetActorRotation().Yaw, 0.0f));
+	}
+	else
+	{
+		bFacing = true;
+	}
+}
+
+void UBTTask_WaitForSettleConfirm::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
+{
+	if (!bFacing)
+	{
+		return;
+	}
+
+	APawn* Pawn = OwnerComp.GetAIOwner() ? OwnerComp.GetAIOwner()->GetPawn() : nullptr;
+	if (Pawn == nullptr || TargetPoint == nullptr)
+	{
+		bFacing = false;
+		return;
+	}
+
+	// 다 돌면 회전만 끝내고 컨펌 대기는 계속한다.
+	if (StepFacing(*Pawn, DeltaSeconds))
+	{
+		bFacing = false;
+	}
 }
 
 void UBTTask_WaitForSettleConfirm::OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTNodeResult::Type TaskResult)
 {
 	// 성공/실패/Abort 어느 경로로 끝나든 여기로 온다 → 구독을 반드시 해제(댕글링 방지).
-	FBTWaitForSettleConfirmMemory* Mem = CastInstanceNodeMemory<FBTWaitForSettleConfirmMemory>(NodeMemory);
-	if (Mem->QuestService.IsValid() && Mem->SettledHandle.IsValid())
+	if (QuestService.IsValid() && SettledHandle.IsValid())
 	{
-		Mem->QuestService->OnQuestAssignmentSettled.Remove(Mem->SettledHandle);
+		QuestService->OnQuestAssignmentSettled.Remove(SettledHandle);
 	}
-	Mem->SettledHandle.Reset();
-	Mem->QuestService.Reset();
-	Mem->GuildService.Reset();
-	Mem->WaitingAssignmentId = INDEX_NONE;
-	Mem->Commission = 0;
-	Mem->Reputation = 0;
+	SettledHandle.Reset();
+	QuestService.Reset();
+	WaitingAssignmentId = INDEX_NONE;
+
+	// 이 태스크의 이동이 진행 중이면 멈추고 콜백을 뗀다.
+	if (MoveRequestID.IsValid())
+	{
+		if (AAIController* Controller = OwnerComp.GetAIOwner())
+		{
+			Controller->StopMovement();
+		}
+	}
+	UnbindMoveCompleted();
+	TargetPoint = nullptr;
+	CachedOwnerComp.Reset();
+	bFacing = false;
 
 	Super::OnTaskFinished(OwnerComp, NodeMemory, TaskResult);
 }
 
-uint16 UBTTask_WaitForSettleConfirm::GetInstanceMemorySize() const
+void UBTTask_WaitForSettleConfirm::UnbindMoveCompleted()
 {
-	return sizeof(FBTWaitForSettleConfirmMemory);
+	if (UBehaviorTreeComponent* OwnerComp = CachedOwnerComp.Get())
+	{
+		if (AAIController* Controller = OwnerComp->GetAIOwner())
+		{
+			Controller->ReceiveMoveCompleted.RemoveDynamic(this, &UBTTask_WaitForSettleConfirm::OnMoveCompleted);
+		}
+	}
+	MoveRequestID = FAIRequestID::InvalidRequest;
 }
 
-void UBTTask_WaitForSettleConfirm::InitializeMemory(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTMemoryInit::Type InitType) const
+bool UBTTask_WaitForSettleConfirm::StepFacing(APawn& Pawn, float DeltaSeconds) const
 {
-	// NodeMemory는 raw. 비POD 멤버(TWeakObjectPtr/FDelegateHandle)를 위해 placement new로 초기화.
-	// (조기 Fail 리턴 경로에서도 OnTaskFinished가 유효한 핸들 상태를 보게 하는 안전장치)
-	new (NodeMemory) FBTWaitForSettleConfirmMemory();
-}
+	const float DesiredYaw = TargetPoint->GetActorRotation().Yaw;
+	const FRotator Current = Pawn.GetActorRotation();
+	const FRotator NewRot = FMath::RInterpTo(Current, FRotator(0.0f, DesiredYaw, 0.0f), DeltaSeconds, InterpSpeed);
+	Pawn.SetActorRotation(NewRot);
 
-void UBTTask_WaitForSettleConfirm::CleanupMemory(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTMemoryClear::Type CleanupType) const
-{
-	CastInstanceNodeMemory<FBTWaitForSettleConfirmMemory>(NodeMemory)->~FBTWaitForSettleConfirmMemory();
+	if (FMath::Abs(FMath::FindDeltaAngleDegrees(NewRot.Yaw, DesiredYaw)) <= AngleTolerance)
+	{
+		Pawn.SetActorRotation(FRotator(0.0f, DesiredYaw, 0.0f));
+		return true;
+	}
+	return false;
 }

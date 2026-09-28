@@ -80,10 +80,11 @@ void USettleBoardWidget::RefreshSettlements()
 	SettlementTileView->ClearListItems();
 	for (const FQuestAssignment& Assignment : Service->QuestAssignments)
 	{
-		// 보상 대기 제출함 = QuestAssignments의 필터. 아직 수행 중인 Accepted, 창구에 안 올라온 Cleared,
-		// 이미 정산된 Settled는 빠진다. QuestService::SettleQuestAssignments(사본 대기열)는 보지 않는다 —
-		// 같은 사실의 진실원을 둘로 두지 않기 위해 State 하나만 읽는다.
-		if (Assignment.State != EQuestAssignmentState::SubmitForSettled)
+		// 보상 대기 제출함 = QuestAssignments의 필터. 정산 컨펌 대기(SubmitForSettled)와 NPC 수령 대기(SettleConfirmed)만 보인다.
+		// 아직 수행 중인 Accepted, 창구에 안 올라온 Cleared는 빠지고, 수령되면(→Settled) 배열에서 제거되어 사라진다.
+		// QuestService::SettleQuestAssignments(사본 대기열)는 보지 않는다 — 같은 사실의 진실원을 둘로 두지 않기 위해 State 하나만 읽는다.
+		if (Assignment.State != EQuestAssignmentState::SubmitForSettled
+			&& Assignment.State != EQuestAssignmentState::SettleConfirmed)
 		{
 			continue;
 		}
@@ -91,6 +92,7 @@ void USettleBoardWidget::RefreshSettlements()
 		USettleEntryObject* Entry = NewObject<USettleEntryObject>(this);
 		Entry->AssignmentId = Assignment.AssignmentId;
 		Entry->QuestId = Assignment.QuestId;
+		Entry->State = Assignment.State;
 		SettlementTileView->AddItem(Entry);
 	}
 }

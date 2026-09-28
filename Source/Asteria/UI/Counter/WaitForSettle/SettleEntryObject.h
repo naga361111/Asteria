@@ -4,10 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "Common/Quest.h"
 #include "SettleEntryObject.generated.h"
 
 /**
- * 보상 대기 제출함 TileView의 item source 한 칸. State==SubmitForSettled인 Assignment 하나의 view-model.
+ * 보상 대기 제출함 TileView의 item source 한 칸. State가 SubmitForSettled 또는 SettleConfirmed인 Assignment 하나의 view-model.
  *
  * 값이 UCounterEntryObject와 같아도 타입은 나눈다 — 칸 위젯이 Cast로 자기 항목만 받아들이는 구조라
  * 타입이 곧 "어느 제출함의 칸인가"의 경계다. 같은 타입을 쓰면 수주함 칸에 정산 항목이 꽂혀도 통과한다.
@@ -26,4 +27,8 @@ public:
 
 	UPROPERTY()
 	int32 QuestId = INDEX_NONE;
+
+	// 이 칸이 그리는 Assignment의 상태(SubmitForSettled 또는 SettleConfirmed). 칸 위젯이 버튼 활성·배경색을 가른다.
+	UPROPERTY()
+	EQuestAssignmentState State = EQuestAssignmentState::SubmitForSettled;
 };

@@ -14,8 +14,9 @@ DECLARE_MULTICAST_DELEGATE(FOnQuestAssignmentsChanged);
 // 특정 Assignment가 Submitted→Accepted로 확정됐음을 알리는 서버 로컬 신호. 인자는 확정된 AssignmentId.
 // (WaitForConfirm BT 태스크가 자기 AssignmentId만 필터해 FinishLatentTask 호출용. 복제 아님)
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnQuestAssignmentAccepted, int32 /*AssignmentId*/);
-// 특정 Assignment가 SubmitForSettled→Settled로 정산 확정됐음을 알리는 서버 로컬 신호. 인자는 정산된 AssignmentId.
-// (WaitForSettleConfirm BT 태스크가 자기 AssignmentId만 필터해 FinishLatentTask 호출용. 복제 아님)
+// 특정 Assignment가 SubmitForSettled→SettleConfirmed로 플레이어 정산 컨펌됐음을 알리는 서버 로컬 신호. 인자는 컨펌된 AssignmentId.
+// (WaitForSettleConfirm BT 태스크가 자기 AssignmentId만 필터해 대기를 끝내는 용도. 복제 아님)
+// 지급은 이 신호가 아니라 NPC 수령 시 CounterService가 한다.
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnQuestAssignmentSettled, int32 /*AssignmentId*/);
 
 
@@ -98,12 +99,17 @@ public:
 	// 올라가 있음은 이 상태값이 전부다 — 창구가 별도 목록을 들지 않는다(SubmitQuestAssignment와 같은 이유).
 	bool SubmitForSettleQuestAssignment(int32 AssignmentId);
 
-	// SubmitForSettled→Settled. 플레이어가 창구에서 정산을 확정한다. 유일한 terminal 전이다.
-	// 정산 통지 직후 그 Assignment는 QuestAssignments에서, 해당 퀘스트는 QuestPull에서 제거된다.
-	// 전이가 실패하면(권위 없음/미존재/상태 불일치) 아무것도 지우지 않는다.
+	// SubmitForSettled→SettleConfirmed. 플레이어의 정산 컨펌 신호다 — 전이와 통지만, 제거·지급은 없다.
+	// 이름은 플레이어 입력 경로(Server_SettleQuestAssignment)와 맞춰 둔다.
 	// 입력 경로는 정산 UI 버튼 → 플레이어(소유 액터)의 Server RPC → CounterService → 여기.
 	// AcceptQuestAssignment와 같은 이유로 클라가 보낸 AssignmentId를 여기서 다시 검증한다.
 	bool SettleQuestAssignment(int32 AssignmentId);
+
+	// SettleConfirmed→Settled. NPC가 창구에서 수령한다. 유일한 terminal 전이다.
+	// 전이 직후 그 Assignment는 QuestAssignments에서, 해당 퀘스트는 QuestPull에서 제거된다.
+	// 전이가 실패하면(권위 없음/미존재/상태 불일치) 아무것도 지우지 않는다.
+	// 실행 경로는 수령(BT) → CounterService → 여기.
+	bool ReceiveSettleQuestAssignment(int32 AssignmentId);
 
 	// --- 파생 질의: 상태에서 읽어낼 뿐 따로 저장하지 않는다 ---
 

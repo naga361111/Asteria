@@ -3,6 +3,7 @@
 
 #include "SettleTileEntryWidget.h"
 #include "SettleEntryObject.h"
+#include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Player/AsteriaPlayer.h"
@@ -14,6 +15,12 @@ void USettleTileEntryWidget::NativeOnInitialized()
 	if (ButtonText)
 	{
 		ButtonText->OnClicked.AddDynamic(this, &USettleTileEntryWidget::HandleSettleClicked);
+	}
+
+	// 재사용 전에 WBP 원래 색을 한 번만 기억한다. 이후 바인딩에서 색을 덮어써도 원본이 남는다.
+	if (StateBorder)
+	{
+		DefaultBorderColor = StateBorder->GetBrushColor();
 	}
 }
 
@@ -28,11 +35,21 @@ void USettleTileEntryWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
 	AssignmentId = Entry->AssignmentId;
 	AssignmentIdText->SetText(FText::AsNumber(AssignmentId));
 	QuestIdText->SetText(FText::AsNumber(Entry->QuestId));
+
+	// 정산 컨펌 대기(SubmitForSettled)만 누를 수 있다. SettleConfirmed는 NPC 수령 대기라 비활성.
+	State = Entry->State;
+	ButtonText->SetIsEnabled(State == EQuestAssignmentState::SubmitForSettled);
+
+	// 수령 대기는 별도 색. 재사용 위젯이라 SubmitForSettled도 매번 원래 색으로 되돌린다.
+	StateBorder->SetBrushColor(State == EQuestAssignmentState::SettleConfirmed
+		? WaitingReceiveColor
+		: DefaultBorderColor);
 }
 
 void USettleTileEntryWidget::HandleSettleClicked()
 {
-	if (AssignmentId == INDEX_NONE)
+	// 수령 대기 칸의 중복 컨펌 차단. 서버도 상태 검사로 거절하지만 요청 자체를 보내지 않는다.
+	if (AssignmentId == INDEX_NONE || State != EQuestAssignmentState::SubmitForSettled)
 	{
 		return;
 	}

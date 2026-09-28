@@ -7,6 +7,7 @@
 #include "CounterService.generated.h"
 
 class UQuestService;
+class UGuildService;
 
 /**
  * 창구(카운터)의 경계. 상태는 하나도 소유하지 않는다.
@@ -43,9 +44,13 @@ public:
 	// 수주 제출과 같은 창구 경계 — 검증은 여기서 하지 않고 QuestService에 위임만 한다.
 	bool ReceiveQuestAssignment(int32 AssignmentId);
 
-	// 플레이어가 창구에서 정산을 확정한다(SubmitForSettled→Settled).
+	// 플레이어의 정산 컨펌 신호(SubmitForSettled→SettleConfirmed). 지급하지 않는다 — 지급은 NPC 수령 시.
 	// 정산 UI의 확정 버튼이 도달하는 종착점. 검증은 여기서 하지 않는다 — 위와 같은 이유.
 	bool SettleQuestAssignment(int32 AssignmentId);
+
+	// NPC가 창구에서 정산을 수령한다(SettleConfirmed→Settled). 수수료는 길드 자금에, 퀘스트 등급의 명성은 길드 명성에 적립한다.
+	// 지급은 수령 순간 서버에서. 수령 후엔 Assignment·퀘스트가 제거되므로 지급 근거는 수령 전에 모두 확보한다.
+	bool ReceiveSettleQuestAssignment(int32 AssignmentId);
 
 	// 제출 여부는 Assignment의 State에서 파생한다.
 	bool IsQuestAssignmentSubmitted(int32 AssignmentId) const;
@@ -53,4 +58,5 @@ public:
 private:
 	// 두 서비스 모두 GameState의 컴포넌트라 오너를 거쳐 찾는다.
 	UQuestService* GetQuestService() const;
+	UGuildService* GetGuildService() const;
 };
