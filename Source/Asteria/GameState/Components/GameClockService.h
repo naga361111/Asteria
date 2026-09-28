@@ -29,4 +29,7 @@ public:
 
 	// 현재 분(0~59).
 	int32 GetMinute() const;
+
+	// 누적 게임 분을 HUD 시계와 같은 "N일차 HH:MM" 텍스트로 변환한다.
+	static FText FormatGameMinutes(int32 GameMinutes);
 };

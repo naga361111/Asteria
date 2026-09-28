@@ -30,4 +30,8 @@ protected:
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> QuestTypeText;
+
+	// 만료 시각. 집힌 퀘스트는 만료가 없으므로 빈 텍스트
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> ExpireTimeText;
 };

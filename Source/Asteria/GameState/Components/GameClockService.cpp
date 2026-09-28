@@ -49,3 +49,9 @@ int32 UGameClockService::GetMinute() const
 {
 	return GetGameMinutes() % MinutesPerHour;
 }
+
+FText UGameClockService::FormatGameMinutes(int32 GameMinutes)
+{
+	return FText::FromString(FString::Printf(TEXT("%d일차 %02d:%02d"),
+		GameMinutes / MinutesPerDay + 1, GameMinutes % MinutesPerDay / MinutesPerHour, GameMinutes % MinutesPerHour));
+}
