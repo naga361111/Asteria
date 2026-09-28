@@ -6,11 +6,14 @@
 #include "AsteriaNpc.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Navigation/PathFollowingComponent.h"
+#include "Navigation/CrowdFollowingComponent.h"
 #include "GameFramework/Character.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTree.h"
 
-ANpcAIController::ANpcAIController()
+// 경로 추종을 Detour Crowd로 교체 → NPC끼리 서로 비켜 지나감(서버에서만 동작).
+ANpcAIController::ANpcAIController(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UCrowdFollowingComponent>(TEXT("PathFollowingComponent")))
 {
 	PrimaryActorTick.bCanEverTick = true;
 }

@@ -15,7 +15,7 @@ class ASTERIA_API ANpcAIController : public AAIController
 {
 	GENERATED_BODY()
 
-	ANpcAIController();
+	ANpcAIController(const FObjectInitializer& ObjectInitializer);
 
 public:
 	virtual void Tick(float DeltaSeconds) override;
