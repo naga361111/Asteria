@@ -131,4 +131,19 @@ private:
 	// 전이마다 다른 건 From/To뿐이라 불변조건 검사를 한 벌로 유지한다.
 	// 성공 시 갱신된 원소, 실패 시 nullptr. 반환 포인터는 즉시 쓰고 버릴 것.
 	FQuestAssignment* TransitionQuestAssignment(int32 AssignmentId, EQuestAssignmentState From, EQuestAssignmentState To);
+
+	// --- 묶음 발행·만료: 전부 서버 전용, 복제 안 함 ---
+
+	// 다음 발행 예정 시각(흔들림 없는 기준, 게임 분). 발행마다 BatchPeriodMinutes씩만 전진해 오차가 누적되지 않는다.
+	int32 NextBatchSlotMinute = 0;
+	// 다음 실제 발행 시각. NextBatchSlotMinute ± BatchJitterMinutes에서 랜덤.
+	int32 NextBatchMinute = 0;
+
+	FTimerHandle QuestClockTimer;
+
+	// 퀘스트 한 묶음을 QuestPull에 추가한다. 통지는 호출자 책임.
+	void IssueQuestBatch();
+
+	// QuestClockTimer가 주기적으로 호출. 발행 시각이 됐으면 묶음 발행, 만료된 미집힘 퀘스트 제거.
+	void TickQuestClock();
 };

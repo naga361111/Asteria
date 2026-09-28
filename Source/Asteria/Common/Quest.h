@@ -23,6 +23,10 @@ struct FQuest
 	// 보상 중 길드가 가져가는 수수료 비율(0~1).
 	UPROPERTY(VisibleAnywhere)
 	float CommissionRate = 0.f;
+
+	// 만료되는 게임 시각(GameClockService의 게임 분). 발행 시 QuestService가 정하고 검사한다.
+	UPROPERTY(VisibleAnywhere)
+	int32 ExpireGameMinute = 0;
 };
 
 // Assignment의 생애 단계. 값을 가르는 축은 "다음에 움직여야 할 주체"다.
