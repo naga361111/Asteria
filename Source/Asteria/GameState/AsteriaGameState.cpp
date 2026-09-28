@@ -7,6 +7,7 @@
 #include "GameState/Components/CounterService.h"
 #include "GameState/Components/GuildService.h"
 #include "GameState/Components/GameClockService.h"
+#include "GameState/Components/NpcSpawnService.h"
 
 AAsteriaGameState::AAsteriaGameState()
 {
@@ -14,4 +15,5 @@ AAsteriaGameState::AAsteriaGameState()
 	CounterService = CreateDefaultSubobject<UCounterService>(TEXT("CounterService"));
 	GuildService = CreateDefaultSubobject<UGuildService>(TEXT("GuildService"));
 	GameClockService = CreateDefaultSubobject<UGameClockService>(TEXT("GameClockService"));
+	NpcSpawnService = CreateDefaultSubobject<UNpcSpawnService>(TEXT("NpcSpawnService"));
 }

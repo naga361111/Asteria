@@ -10,6 +10,7 @@ class UCounterService;
 class UQuestService;
 class UGuildService;
 class UGameClockService;
+class UNpcSpawnService;
 
 /**
  *
@@ -33,4 +34,7 @@ public:
 
 	UPROPERTY(VisibleAnywhere, Category="Time")
 	TObjectPtr<UGameClockService> GameClockService;
+
+	UPROPERTY(VisibleAnywhere, Category="Npc")
+	TObjectPtr<UNpcSpawnService> NpcSpawnService;
 };

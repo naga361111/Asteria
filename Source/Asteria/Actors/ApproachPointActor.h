@@ -14,6 +14,8 @@ enum class EApproachPointType : uint8
 	Dungeon,
 	Disappear,
 	Lounge,
+	// NPC가 나타나는 지점. NpcSpawnService가 여럿 중 무작위로 고른다.
+	Spawn,
 };
 
 UCLASS()
