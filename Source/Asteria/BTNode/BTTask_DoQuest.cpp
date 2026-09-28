@@ -36,8 +36,8 @@ EBTNodeResult::Type UBTTask_DoQuest::ExecuteTask(UBehaviorTreeComponent& OwnerCo
 	UQuestService* Service = GS ? GS->QuestService : nullptr;
 	if (Service == nullptr) return EBTNodeResult::Failed;
 
-	// 무엇을 수행할지는 소유자에게 묻는다. 수주 확정된 것만 — Assigned/Submitted는 아직 내 실행 차례가 아니다.
-	const FQuestAssignment* Assignment = Service->FindQuestAssignmentByNpc(Npc->NpcId, EQuestAssignmentState::Accepted);
+	// 무엇을 수행할지는 소유자에게 묻는다. 창구에서 회수한 것만 — Assigned/Submitted/Accepted는 아직 내 실행 차례가 아니다.
+	const FQuestAssignment* Assignment = Service->FindQuestAssignmentByNpc(Npc->NpcId, EQuestAssignmentState::Received);
 	if (Assignment == nullptr) return EBTNodeResult::Failed;
 
 	FBTDoQuestMemory* Mem = CastInstanceNodeMemory<FBTDoQuestMemory>(NodeMemory);

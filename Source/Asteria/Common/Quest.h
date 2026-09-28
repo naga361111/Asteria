@@ -42,8 +42,10 @@ enum class EQuestAssignmentState : uint8
 	Assigned,
 	// 카운터 제출함에 올라갔다 — 다음 행위자는 플레이어.
 	Submitted,
-	// 플레이어가 수주를 확정했다 — 다음 행위자는 NPC(던전 수행).
+	// 플레이어가 컨펌했고 NPC의 창구 회수를 기다림 — 다음 행위자는 NPC(회수).
 	Accepted,
+	// NPC가 창구에서 컨펌된 퀘스트를 회수함 — 다음 행위자는 NPC(던전 수행).
+	Received,
 	// 수행이 끝났다. 창구 정산이 남았다 — 다음 행위자는 플레이어.
 	Cleared,
 	// 카운터의 보상 대기 제출함에 올라갔다 - 다음 행위자는 플레이어.

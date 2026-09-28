@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/IUserObjectListEntry.h"
+#include "Common/Quest.h"
 #include "CounterTileEntryWidget.generated.h"
 
 class UButton;
@@ -46,4 +47,7 @@ protected:
 private:
 	// 이 칸이 지금 그리고 있는 대상. 재사용되는 위젯이라 바인딩될 때마다 갈린다.
 	int32 AssignmentId = INDEX_NONE;
+
+	// 이 칸이 그리는 Assignment의 상태. 재사용 위젯이라 바인딩마다 갱신된다.
+	EQuestAssignmentState State = EQuestAssignmentState::Submitted;
 };

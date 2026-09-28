@@ -86,7 +86,11 @@ public:
 	// 클라가 보낸 AssignmentId는 그 사이 사라졌거나 상태가 어긋났을 수 있으므로 여기서 다시 검증한다.
 	bool AcceptQuestAssignment(int32 AssignmentId);
 
-	// Accepted→Cleared. NPC가 수행을 마친다. 실행 경로는 던전 수행(BT) → 여기.
+	// Accepted→Received. NPC가 창구에서 컨펌된 퀘스트를 회수한다. 실행 경로는 회수(BT) → CounterService → 여기.
+	// 회수 전까지 Accepted로 제출함에 남아 있고, Received가 되면 제출함 뷰에서 빠진다.
+	bool ReceiveQuestAssignment(int32 AssignmentId);
+
+	// Received→Cleared. NPC가 수행을 마친다. 실행 경로는 던전 수행(BT) → 여기.
 	// 다음은 창구 정산(Cleared→Settled)이고, 중복 완료는 From 검사에서 막힌다.
 	bool ClearQuestAssignment(int32 AssignmentId);
 

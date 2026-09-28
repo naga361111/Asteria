@@ -79,8 +79,10 @@ void UCounterBoardWidget::RefreshSubmissions()
 	SubmissionTileView->ClearListItems();
 	for (const FQuestAssignment& Assignment : Service->QuestAssignments)
 	{
-		// 제출함 = QuestAssignments의 필터. 창구에 아직 도착 안 한 Assigned, 이미 끝난 Accepted는 빠진다.
-		if (Assignment.State != EQuestAssignmentState::Submitted)
+		// 제출함 = QuestAssignments의 필터. Submitted(컨펌 대기) + Accepted(회수 대기)만 남긴다.
+		// 창구에 아직 도착 안 한 Assigned, NPC가 회수해 간 Received 이후는 빠진다.
+		if (Assignment.State != EQuestAssignmentState::Submitted
+			&& Assignment.State != EQuestAssignmentState::Accepted)
 		{
 			continue;
 		}
@@ -88,6 +90,7 @@ void UCounterBoardWidget::RefreshSubmissions()
 		UCounterEntryObject* Entry = NewObject<UCounterEntryObject>(this);
 		Entry->AssignmentId = Assignment.AssignmentId;
 		Entry->QuestId = Assignment.QuestId;
+		Entry->State = Assignment.State;
 		SubmissionTileView->AddItem(Entry);
 	}
 }

@@ -14,7 +14,8 @@ class UTileView;
 /**
  * 창구 제출함을 TileView로 표시하는 컨테이너. 표시 전용 소비자.
  *
- * 제출함은 독립된 목록이 아니라 QuestAssignments에서 State==Submitted를 거른 뷰다.
+ * 제출함은 독립된 목록이 아니라 QuestAssignments에서 Submitted(컨펌 대기)와
+ * Accepted(NPC 회수 대기)를 거른 뷰다. NPC가 회수해 Received가 되면 보드에서 사라진다.
  * 그래서 진실원인 QuestService를 직접 읽고 구독한다 — 창구는 사본을 들고 있지 않다.
  * 상태는 서버가 소유하고 이 위젯은 복제된 값을 읽기만 한다.
  */
@@ -32,7 +33,7 @@ protected:
 	void BindToQuestService(AAsteriaGameState* GameState);
 	void HandleGameStateSet(AGameStateBase* NewGameState);
 
-	// QuestAssignments에서 제출 상태만 걸러 TileView를 다시 그림 (bind 대상 + 초기 prime)
+	// QuestAssignments에서 Submitted·Accepted만 걸러 TileView를 다시 그림 (bind 대상 + 초기 prime)
 	void RefreshSubmissions();
 
 	// WBP의 TileView와 이름 일치시킬 것

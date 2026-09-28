@@ -261,10 +261,16 @@ bool UQuestService::AcceptQuestAssignment(int32 AssignmentId)
 	return true;
 }
 
+bool UQuestService::ReceiveQuestAssignment(int32 AssignmentId)
+{
+	return TransitionQuestAssignment(AssignmentId,
+		EQuestAssignmentState::Accepted, EQuestAssignmentState::Received) != nullptr;
+}
+
 bool UQuestService::ClearQuestAssignment(int32 AssignmentId)
 {
 	return TransitionQuestAssignment(AssignmentId,
-		EQuestAssignmentState::Accepted, EQuestAssignmentState::Cleared) != nullptr;
+		EQuestAssignmentState::Received, EQuestAssignmentState::Cleared) != nullptr;
 }
 
 bool UQuestService::SubmitForSettleQuestAssignment(int32 AssignmentId)

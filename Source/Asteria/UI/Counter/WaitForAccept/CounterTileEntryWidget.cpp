@@ -28,11 +28,16 @@ void UCounterTileEntryWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
 	AssignmentId = Entry->AssignmentId;
 	AssignmentIdText->SetText(FText::AsNumber(AssignmentId));
 	QuestIdText->SetText(FText::AsNumber(Entry->QuestId));
+
+	// 컨펌 대기(Submitted)만 누를 수 있다. Accepted는 NPC 회수 대기라 비활성.
+	State = Entry->State;
+	ButtonText->SetIsEnabled(State == EQuestAssignmentState::Submitted);
 }
 
 void UCounterTileEntryWidget::HandleAcceptClicked()
 {
-	if (AssignmentId == INDEX_NONE)
+	// 회수 대기 칸의 중복 컨펌 차단. 서버도 상태 검사로 거절하지만 요청 자체를 보내지 않는다.
+	if (AssignmentId == INDEX_NONE || State != EQuestAssignmentState::Submitted)
 	{
 		return;
 	}
