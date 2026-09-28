@@ -4,28 +4,55 @@
 #include "BTTask_WaitForConfirmQuest.h"
 
 #include "AIController.h"
+#include "GameFramework/Pawn.h"
+#include "BehaviorTree/BehaviorTreeComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "NPC/AsteriaNpc.h"
 #include "GameState/AsteriaGameState.h"
 #include "GameState/Components/QuestService.h"
-#include "GameState/Components/CounterService.h"
 
-// 이 태스크의 실행별 상태. 노드는 트리를 쓰는 모든 AI가 공유하는 단일 인스턴스라
-// 멤버 변수에 두면 서로 덮어쓴다 → NodeMemory에 담는다.
-struct FBTWaitForConfirmQuestMemory
+namespace
 {
-	TWeakObjectPtr<UQuestService> QuestService;
-	FDelegateHandle AcceptedHandle;
-	int32 WaitingAssignmentId = INDEX_NONE;
-};
+	// NPC 기준 해당 종류의 가장 가까운 접근 지점(2D 거리). 없으면 null.
+	// MoveToApproachPoint.cpp와 같은 탐색 — 그 태스크를 건드리지 않기 위해 복제.
+	AApproachPointActor* FindNearestWaitPoint(UWorld* World, EApproachPointType Type, const FVector& Origin)
+	{
+		TArray<AActor*> Points;
+		UGameplayStatics::GetAllActorsOfClass(World, AApproachPointActor::StaticClass(), Points);
+
+		AApproachPointActor* Best = nullptr;
+		float BestDistSq = TNumericLimits<float>::Max();
+		for (AActor* Actor : Points)
+		{
+			AApproachPointActor* Point = Cast<AApproachPointActor>(Actor);
+			if (Point == nullptr || Point->PointType != Type)
+			{
+				continue;
+			}
+
+			const float DistSq = FVector::DistSquared2D(Origin, Point->GetActorLocation());
+			if (DistSq < BestDistSq)
+			{
+				BestDistSq = DistSq;
+				Best = Point;
+			}
+		}
+		return Best;
+	}
+}
 
 UBTTask_WaitForConfirmQuest::UBTTask_WaitForConfirmQuest()
 {
 	NodeName = TEXT("Wait For Confirm Quest");
 
-	// bNotifyTaskFinished는 기본 false다 — 안 켜면 OnTaskFinished가 호출되지 않아
-	// 아래에서 거는 구독이 영영 해제되지 않는다(실행할 때마다 람다가 쌓인다).
-	// 이 매크로가 오버라이드 여부를 보고 Tick/TaskFinished 플래그를 맞춰준다.
-	INIT_TASK_NODE_NOTIFY_FLAGS();
+	// 실행 중 상태(이동·회전·구독)를 멤버에 저장하므로 트리 컴포넌트마다 별도 인스턴스가 필요하다.
+	bCreateNodeInstance = true;
+
+	// 회전 페이즈에서만 틱을 사용한다.
+	bNotifyTick = true;
+
+	// 성공/실패/Abort 공통 정리를 OnTaskFinished에서 한다.
+	bNotifyTaskFinished = true;
 }
 
 EBTNodeResult::Type UBTTask_WaitForConfirmQuest::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
@@ -42,79 +69,185 @@ EBTNodeResult::Type UBTTask_WaitForConfirmQuest::ExecuteTask(UBehaviorTreeCompon
 	UQuestService* Service = GS->QuestService;
 	if (Service == nullptr) return EBTNodeResult::Failed;
 
-	UCounterService* Counter = GS->CounterService;
-	if (Counter == nullptr) return EBTNodeResult::Failed;
-
-	// 내가 기다릴 Assignment = 파티에 내 NpcId가 들고 아직 제출 전(Assigned)인 Assignment.
-	// 상태를 안 보면 이미 올린 것·수주 확정된 것까지 집어 엉뚱한 Assignment를 기다린다.
-	// TODO: SelectQuest가 AssignmentId를 넘겨주는 경계가 서면 그 값을 받아 이 순회를 대체.
-	int32 WaitingAssignmentId = INDEX_NONE;
-	for (const FQuestAssignment& Assignment : Service->QuestAssignments)
+	// 내가 기다릴 Assignment = 내 NpcId가 파티에 있고 제출된(Submitted) 것.
+	const FQuestAssignment* Assignment = Service->FindQuestAssignmentByNpc(Npc->NpcId, EQuestAssignmentState::Submitted);
+	if (Assignment == nullptr)
 	{
-		if (Assignment.State == EQuestAssignmentState::Assigned && Assignment.Party.Contains(Npc->NpcId))
-		{
-			WaitingAssignmentId = Assignment.AssignmentId;
-			break;
-		}
+		// 제출과 대기 사이에 이미 컨펌됐으면 기다릴 것 없이 성공(이동 없음). 둘 다 없으면 기다릴 대상이 없다.
+		return Service->FindQuestAssignmentByNpc(Npc->NpcId, EQuestAssignmentState::Accepted)
+			? EBTNodeResult::Succeeded
+			: EBTNodeResult::Failed;
 	}
-	if (WaitingAssignmentId == INDEX_NONE) return EBTNodeResult::Failed; // 집은 게 없으면 기다릴 대상도 없음
 
-	FBTWaitForConfirmQuestMemory* Mem = CastInstanceNodeMemory<FBTWaitForConfirmQuestMemory>(NodeMemory);
-	Mem->QuestService = Service;
-	Mem->WaitingAssignmentId = WaitingAssignmentId;
+	QuestService = Service;
+	// 포인터가 아니라 id만 들고 간다 — QuestAssignments가 바뀌면 위 포인터는 그 즉시 무효.
+	WaitingAssignmentId = Assignment->AssignmentId;
+	CachedOwnerComp = &OwnerComp;
+	bFacing = false;
 
 	// 밖에서 깨우고(QuestService가 Submitted→Accepted 시 OnQuestAssignmentAccepted.Broadcast) → 안에서 끝낸다(이 람다가 FinishLatentTask 호출).
 	// 브로드캐스트는 어느 Assignment든 오므로 내 AssignmentId만 필터.
-	Mem->AcceptedHandle = Service->OnQuestAssignmentAccepted.AddLambda(
-		[this, &OwnerComp, Mem](int32 AcceptedAssignmentId)
+	// 이동 중이든 도착 후든 즉시 끝낸다 — 걸어가던 이동은 OnTaskFinished가 멈춘다.
+	AcceptedHandle = Service->OnQuestAssignmentAccepted.AddLambda(
+		[this, &OwnerComp](int32 AcceptedAssignmentId)
 		{
-			if (AcceptedAssignmentId == Mem->WaitingAssignmentId)
+			if (AcceptedAssignmentId == WaitingAssignmentId)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("Assignment Accepted: %d"), AcceptedAssignmentId)
 				FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 			}
 		});
 
-	// 구독을 먼저, 제출은 그 다음 — 순서가 바뀌면 제출 직후의 컨펌을 놓친다.
-	// 실패하면 기다릴 이유가 없다 → Failed. (구독 해제는 OnTaskFinished가 책임)
-	if (!Counter->SubmitQuestAssignment(WaitingAssignmentId))
+	UE_LOG(LogTemp, Warning, TEXT("Wait For Assignment:%d Confirm"), WaitingAssignmentId)
+
+	// 대기 지점 탐색. 대기 자리는 연출이라 지점이 없어도 실패하지 않고 제자리에서 기다린다.
+	TargetPoint = FindNearestWaitPoint(Npc->GetWorld(), TargetType, Npc->GetActorLocation());
+	if (TargetPoint == nullptr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("SubmitQuestAssignment failed. Assignment:%d"), WaitingAssignmentId)
-		return EBTNodeResult::Failed;
+		UE_LOG(LogTemp, Warning, TEXT("No wait point found. Waiting in place. Assignment:%d"), WaitingAssignmentId)
+		return EBTNodeResult::InProgress;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Wait For Assignment:%d Confirm"), WaitingAssignmentId)
+	// 대기 지점으로 이동 요청.
+	const EPathFollowingRequestResult::Type MoveResult = AICon->MoveToActor(TargetPoint, AcceptableRadius);
+	switch (MoveResult)
+	{
+	case EPathFollowingRequestResult::Failed:
+		UE_LOG(LogTemp, Warning, TEXT("Move to wait point failed. Waiting in place. Assignment:%d"), WaitingAssignmentId)
+		break;
+
+	case EPathFollowingRequestResult::AlreadyAtGoal:
+		// 이미 도착 → 바로 회전 페이즈로.
+		if (InterpSpeed <= 0.0f)
+		{
+			Npc->SetActorRotation(FRotator(0.0f, TargetPoint->GetActorRotation().Yaw, 0.0f));
+		}
+		else
+		{
+			bFacing = true;
+		}
+		break;
+
+	case EPathFollowingRequestResult::RequestSuccessful:
+	default:
+		MoveRequestID = AICon->GetCurrentMoveRequestID();
+		AICon->ReceiveMoveCompleted.AddDynamic(this, &UBTTask_WaitForConfirmQuest::OnMoveCompleted);
+		break;
+	}
 	return EBTNodeResult::InProgress;
+}
+
+void UBTTask_WaitForConfirmQuest::OnMoveCompleted(FAIRequestID RequestID, EPathFollowingResult::Type Result)
+{
+	// 이전 실행의 스테일 콜백 무시.
+	if (!RequestID.IsEquivalent(MoveRequestID))
+	{
+		return;
+	}
+
+	UBehaviorTreeComponent* OwnerComp = CachedOwnerComp.Get();
+	if (OwnerComp == nullptr)
+	{
+		return;
+	}
+
+	UnbindMoveCompleted();
+
+	// 도착 실패(막힘·중단 등)여도 태스크를 끝내지 않고 제자리에서 컨펌을 기다린다.
+	if (Result != EPathFollowingResult::Success)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Move to wait point failed. Waiting in place. Assignment:%d"), WaitingAssignmentId)
+		return;
+	}
+
+	APawn* Pawn = OwnerComp->GetAIOwner() ? OwnerComp->GetAIOwner()->GetPawn() : nullptr;
+	if (Pawn == nullptr || TargetPoint == nullptr)
+	{
+		return;
+	}
+
+	// 회전 페이즈 진입. 보간 모드는 TickTask가 마무리한다.
+	if (InterpSpeed <= 0.0f)
+	{
+		Pawn->SetActorRotation(FRotator(0.0f, TargetPoint->GetActorRotation().Yaw, 0.0f));
+	}
+	else
+	{
+		bFacing = true;
+	}
+}
+
+void UBTTask_WaitForConfirmQuest::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
+{
+	if (!bFacing)
+	{
+		return;
+	}
+
+	APawn* Pawn = OwnerComp.GetAIOwner() ? OwnerComp.GetAIOwner()->GetPawn() : nullptr;
+	if (Pawn == nullptr || TargetPoint == nullptr)
+	{
+		bFacing = false;
+		return;
+	}
+
+	// 다 돌면 회전만 끝내고 컨펌 대기는 계속한다.
+	if (StepFacing(*Pawn, DeltaSeconds))
+	{
+		bFacing = false;
+	}
 }
 
 void UBTTask_WaitForConfirmQuest::OnTaskFinished(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTNodeResult::Type TaskResult)
 {
 	// 성공/실패/Abort 어느 경로로 끝나든 여기로 온다 → 구독을 반드시 해제(댕글링 방지).
-	FBTWaitForConfirmQuestMemory* Mem = CastInstanceNodeMemory<FBTWaitForConfirmQuestMemory>(NodeMemory);
-	if (Mem->QuestService.IsValid() && Mem->AcceptedHandle.IsValid())
+	if (QuestService.IsValid() && AcceptedHandle.IsValid())
 	{
-		Mem->QuestService->OnQuestAssignmentAccepted.Remove(Mem->AcceptedHandle);
+		QuestService->OnQuestAssignmentAccepted.Remove(AcceptedHandle);
 	}
-	Mem->AcceptedHandle.Reset();
-	Mem->QuestService.Reset();
-	Mem->WaitingAssignmentId = INDEX_NONE;
+	AcceptedHandle.Reset();
+	QuestService.Reset();
+	WaitingAssignmentId = INDEX_NONE;
+
+	// 이 태스크의 이동이 진행 중이면 멈추고 콜백을 뗀다.
+	if (MoveRequestID.IsValid())
+	{
+		if (AAIController* Controller = OwnerComp.GetAIOwner())
+		{
+			Controller->StopMovement();
+		}
+	}
+	UnbindMoveCompleted();
+	TargetPoint = nullptr;
+	CachedOwnerComp.Reset();
+	bFacing = false;
 
 	Super::OnTaskFinished(OwnerComp, NodeMemory, TaskResult);
 }
 
-uint16 UBTTask_WaitForConfirmQuest::GetInstanceMemorySize() const
+void UBTTask_WaitForConfirmQuest::UnbindMoveCompleted()
 {
-	return sizeof(FBTWaitForConfirmQuestMemory);
+	if (UBehaviorTreeComponent* OwnerComp = CachedOwnerComp.Get())
+	{
+		if (AAIController* Controller = OwnerComp->GetAIOwner())
+		{
+			Controller->ReceiveMoveCompleted.RemoveDynamic(this, &UBTTask_WaitForConfirmQuest::OnMoveCompleted);
+		}
+	}
+	MoveRequestID = FAIRequestID::InvalidRequest;
 }
 
-void UBTTask_WaitForConfirmQuest::InitializeMemory(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTMemoryInit::Type InitType) const
+bool UBTTask_WaitForConfirmQuest::StepFacing(APawn& Pawn, float DeltaSeconds) const
 {
-	// NodeMemory는 raw. 비POD 멤버(TWeakObjectPtr/FDelegateHandle)를 위해 placement new로 초기화.
-	// (조기 Fail 리턴 경로에서도 OnTaskFinished가 유효한 핸들 상태를 보게 하는 안전장치)
-	new (NodeMemory) FBTWaitForConfirmQuestMemory();
-}
+	const float DesiredYaw = TargetPoint->GetActorRotation().Yaw;
+	const FRotator Current = Pawn.GetActorRotation();
+	const FRotator NewRot = FMath::RInterpTo(Current, FRotator(0.0f, DesiredYaw, 0.0f), DeltaSeconds, InterpSpeed);
+	Pawn.SetActorRotation(NewRot);
 
-void UBTTask_WaitForConfirmQuest::CleanupMemory(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTMemoryClear::Type CleanupType) const
-{
-	CastInstanceNodeMemory<FBTWaitForConfirmQuestMemory>(NodeMemory)->~FBTWaitForConfirmQuestMemory();
+	if (FMath::Abs(FMath::FindDeltaAngleDegrees(NewRot.Yaw, DesiredYaw)) <= AngleTolerance)
+	{
+		Pawn.SetActorRotation(FRotator(0.0f, DesiredYaw, 0.0f));
+		return true;
+	}
+	return false;
 }

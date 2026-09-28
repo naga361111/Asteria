@@ -13,6 +13,7 @@ enum class EApproachPointType : uint8
 	QuestBoard,
 	Dungeon,
 	Disappear,
+	Lounge,
 };
 
 UCLASS()
