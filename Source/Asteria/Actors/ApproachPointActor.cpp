@@ -3,6 +3,8 @@
 
 #include "ApproachPointActor.h"
 
+#include "GameFramework/Pawn.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AApproachPointActor::AApproachPointActor()
@@ -22,5 +24,30 @@ void AApproachPointActor::BeginPlay()
 void AApproachPointActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+}
+
+AApproachPointActor* AApproachPointActor::FindNearestFree(UWorld* World, EApproachPointType Type, const FVector& Origin)
+{
+	TArray<AActor*> Points;
+	UGameplayStatics::GetAllActorsOfClass(World, AApproachPointActor::StaticClass(), Points);
+
+	AApproachPointActor* Best = nullptr;
+	float BestDistSq = TNumericLimits<float>::Max();
+	for (AActor* Actor : Points)
+	{
+		AApproachPointActor* Point = Cast<AApproachPointActor>(Actor);
+		if (Point == nullptr || Point->PointType != Type || Point->Occupant.IsValid())
+		{
+			continue;
+		}
+
+		const float DistSq = FVector::DistSquared2D(Origin, Point->GetActorLocation());
+		if (DistSq < BestDistSq)
+		{
+			BestDistSq = DistSq;
+			Best = Point;
+		}
+	}
+	return Best;
 }
 

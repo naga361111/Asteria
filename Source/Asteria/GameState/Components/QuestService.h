@@ -7,6 +7,9 @@
 #include "Common/Quest.h"
 #include "QuestService.generated.h"
 
+class UQuestIssueData;
+struct FQuestIssueSettings;
+
 DECLARE_MULTICAST_DELEGATE(FOnQuestPullChanged);
 // QuestAssignments가 바뀌었음을 알리는 신호. 원소 추가·제거뿐 아니라 State 전이도 여기로 온다 —
 // 제출함처럼 QuestAssignments에서 파생되는 모든 뷰가 이 하나를 구독한다.
@@ -33,6 +36,10 @@ public:
 	UQuestService();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// 길드 등급별 발행·만료 표. BP_GameState의 컴포넌트 기본값에서 지정한다.
+	UPROPERTY(EditDefaultsOnly, Category="Quest")
+	TObjectPtr<UQuestIssueData> IssueData;
 
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_QuestPull, Category="Quest")
 	TArray<FQuest> QuestPull;
@@ -144,15 +151,18 @@ private:
 
 	// --- 묶음 발행·만료: 전부 서버 전용, 복제 안 함 ---
 
-	// 다음 발행 예정 시각(흔들림 없는 기준, 게임 분). 발행마다 BatchPeriodMinutes씩만 전진해 오차가 누적되지 않는다.
+	// 다음 발행 예정 시각(흔들림 없는 기준, 게임 분). 발행마다 그때 길드 등급의 간격만큼만 전진해 오차가 누적되지 않는다.
 	int32 NextBatchSlotMinute = 0;
-	// 다음 실제 발행 시각. NextBatchSlotMinute ± BatchJitterMinutes에서 랜덤.
+	// 다음 실제 발행 시각. NextBatchSlotMinute ± 흔들림 폭에서 랜덤.
 	int32 NextBatchMinute = 0;
 
 	FTimerHandle QuestClockTimer;
 
-	// 퀘스트 한 묶음을 QuestPull에 추가한다. 통지는 호출자 책임.
-	void IssueQuestBatch();
+	// 현재 길드 등급의 발행 설정. 표나 항목이 없으면 nullptr — 그 동안은 발행하지 않는다.
+	const FQuestIssueSettings* FindIssueSettings() const;
+
+	// 퀘스트 한 묶음을 QuestPull에 추가하고 다음 발행 시각을 잡는다. 통지는 호출자 책임.
+	void IssueQuestBatch(const FQuestIssueSettings& Settings);
 
 	// QuestClockTimer가 주기적으로 호출. 발행 시각이 됐으면 묶음 발행, 만료된 미집힘 퀘스트 제거.
 	void TickQuestClock();

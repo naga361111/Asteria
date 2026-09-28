@@ -31,6 +31,12 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Approach")
 	EApproachPointType PointType = EApproachPointType::Counter;
 
+	// 이 지점을 예약한 폰. 서버 전용이라 복제·UPROPERTY 없음 — 폰이 사라지면 약참조가 풀려 자동으로 빈 자리.
+	TWeakObjectPtr<APawn> Occupant;
+
+	// Origin 기준 해당 종류이면서 예약되지 않은 가장 가까운 지점(2D 거리). 없으면 null.
+	static AApproachPointActor* FindNearestFree(UWorld* World, EApproachPointType Type, const FVector& Origin);
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

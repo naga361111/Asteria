@@ -17,14 +17,14 @@ namespace
 	constexpr float SpawnCheckIntervalSeconds = 1.f;
 
 	// 등급 추첨은 QuestService의 RollQuestRank와 같은 규칙(복사본). 퀘스트 쪽을 바꾸면 여기도 맞출 것.
-	// 길드 등급에서 한 단계 내려갈 때마다 곱하는 무게 비율.
-	constexpr float LowerRankFalloff = 0.5f;
-	// 길드 등급 바로 위 한 단계의 무게. 그보다 위는 나오지 않는다.
-	constexpr float UpperRankWeight = 0.3f;
-
 	// 길드 등급 기준 가중 추첨: 동급 1, 아래는 단계마다 LowerRankFalloff 배, 위 한 단계만 UpperRankWeight.
 	ERank RollNpcRank(ERank GuildRank)
 	{
+		// 길드 등급에서 한 단계 내려갈 때마다 곱하는 무게 비율.
+		constexpr float LowerRankFalloff = 0.5f;
+		// 길드 등급 바로 위 한 단계의 무게. 그보다 위는 나오지 않는다.
+		constexpr float UpperRankWeight = 0.3f;
+
 		const int32 Guild = static_cast<int32>(GuildRank);
 		const int32 Top = FMath::Min(Guild + 1, static_cast<int32>(ERank::S)); // S급 초과는 없다
 

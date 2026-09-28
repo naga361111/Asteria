@@ -5,6 +5,7 @@
 
 #include "GuildService.h"
 #include "GameClockService.h"
+#include "Data/QuestIssueData.h"
 #include "GameState/AsteriaGameState.h"
 #include "Net/UnrealNetwork.h"
 
@@ -25,27 +26,17 @@ namespace
 	constexpr float MinCommissionRate = 0.1f;
 	constexpr float MaxCommissionRate = 0.3f;
 
-	// 길드 등급에서 한 단계 내려갈 때마다 곱하는 무게 비율.
-	constexpr float LowerRankFalloff = 0.5f;
-	// 길드 등급 바로 위 한 단계의 무게. 그보다 위는 발행하지 않는다.
-	constexpr float UpperRankWeight = 0.3f;
-
-	// 한 묶음에 발행되는 퀘스트 수 범위.
-	constexpr int32 MinBatchSize = 3;
-	constexpr int32 MaxBatchSize = 4;
-	// 퀘스트 제한 시간 범위(게임 분).
-	constexpr int32 MinQuestLifetimeMinutes = 240;
-	constexpr int32 MaxQuestLifetimeMinutes = 480;
-	// 발행 예정 시각 간격(게임 분).
-	constexpr int32 BatchPeriodMinutes = 180;
-	// 실제 발행이 예정 시각에서 앞뒤로 흔들리는 폭(게임 분).
-	constexpr int32 BatchJitterMinutes = 30;
 	// 발행·만료를 확인하는 실제 시간 주기(초).
 	constexpr float QuestClockIntervalSeconds = 1.f;
 
 	// 길드 등급 기준 가중 추첨: 동급 1, 아래는 단계마다 LowerRankFalloff 배, 위 한 단계만 UpperRankWeight.
 	ERank RollQuestRank(ERank GuildRank)
 	{
+		// 길드 등급에서 한 단계 내려갈 때마다 곱하는 무게 비율.
+		constexpr float LowerRankFalloff = 0.5f;
+		// 길드 등급 바로 위 한 단계의 무게. 그보다 위는 발행하지 않는다.
+		constexpr float UpperRankWeight = 0.3f;
+
 		const int32 Guild = static_cast<int32>(GuildRank);
 		const int32 Top = FMath::Min(Guild + 1, static_cast<int32>(ERank::S)); // S급 초과는 없다
 
@@ -90,16 +81,19 @@ void UQuestService::BeginPlay()
 	}
 
 	const AAsteriaGameState* GameState = Cast<AAsteriaGameState>(GetOwner());
-	if (!GameState || !GameState->GuildService || !GameState->GameClockService)
+	if (!GameState || !GameState->GuildService || !GameState->GameClockService || !IssueData)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("QuestService: no owning GameState, GuildService or GameClockService. Quests not generated."));
+		UE_LOG(LogTemp, Warning, TEXT("QuestService: no owning GameState, GuildService, GameClockService or IssueData. Quests not generated."));
 		return;
 	}
 
 	// 첫 묶음은 즉시 발행하고, 다음 예정 시각은 지금부터 한 주기 뒤.
-	IssueQuestBatch();
-	NextBatchSlotMinute = GameState->GameClockService->GetGameMinutes() + BatchPeriodMinutes;
-	NextBatchMinute = NextBatchSlotMinute + FMath::RandRange(-BatchJitterMinutes, BatchJitterMinutes);
+	// 시작 등급 항목이 없으면 예정 시각이 지금에 머물러, 항목이 있는 등급이 되는 순간 발행한다.
+	NextBatchSlotMinute = NextBatchMinute = GameState->GameClockService->GetGameMinutes();
+	if (const FQuestIssueSettings* Settings = FindIssueSettings())
+	{
+		IssueQuestBatch(*Settings);
+	}
 
 	GetWorld()->GetTimerManager().SetTimer(QuestClockTimer, this, &UQuestService::TickQuestClock,
 		QuestClockIntervalSeconds, true);
@@ -108,7 +102,17 @@ void UQuestService::BeginPlay()
 	OnQuestPullChanged.Broadcast();
 }
 
-void UQuestService::IssueQuestBatch()
+const FQuestIssueSettings* UQuestService::FindIssueSettings() const
+{
+	const AAsteriaGameState* GameState = Cast<AAsteriaGameState>(GetOwner());
+	if (!IssueData || !GameState || !GameState->GuildService)
+	{
+		return nullptr;
+	}
+	return IssueData->IssueSettingsByGuildRank.Find(GameState->GuildService->GuildRank);
+}
+
+void UQuestService::IssueQuestBatch(const FQuestIssueSettings& Settings)
 {
 	const AAsteriaGameState* GameState = Cast<AAsteriaGameState>(GetOwner());
 	if (!GameState || !GameState->GuildService || !GameState->GameClockService)
@@ -116,10 +120,10 @@ void UQuestService::IssueQuestBatch()
 		return;
 	}
 
-	// 등급은 발행 시점의 길드 등급 기준 — 길드가 성장하면 이후 묶음부터 반영된다.
+	// 등급·설정은 발행 시점의 길드 등급 기준 — 길드가 성장하면 이후 묶음부터 반영된다.
 	const ERank GuildRank = GameState->GuildService->GuildRank;
 	const int32 Now = GameState->GameClockService->GetGameMinutes();
-	const int32 BatchSize = FMath::RandRange(MinBatchSize, MaxBatchSize);
+	const int32 BatchSize = FMath::RandRange(Settings.MinBatchSize, Settings.MaxBatchSize);
 	for (int32 i = 0; i < BatchSize; ++i)
 	{
 		FQuest Quest;
@@ -128,9 +132,14 @@ void UQuestService::IssueQuestBatch()
 		const int32 Rnk = static_cast<int32>(Quest.QuestRnk);
 		Quest.RewardAmount = FMath::RandRange(RewardRangeByRank[Rnk][0], RewardRangeByRank[Rnk][1]);
 		Quest.CommissionRate = FMath::FRandRange(MinCommissionRate, MaxCommissionRate);
-		Quest.ExpireGameMinute = Now + FMath::RandRange(MinQuestLifetimeMinutes, MaxQuestLifetimeMinutes);
+		Quest.ExpireGameMinute = Now + FMath::RandRange(Settings.MinQuestLifetimeMinutes, Settings.MaxQuestLifetimeMinutes);
 		QuestPull.Add(Quest);
 	}
+
+	// 기준 시각만 한 주기 전진시켜 흔들림이 다음 예정 시각에 누적되지 않게 한다.
+	// 표 항목이 없어 발행을 쉬었다면 기준 시각이 한참 뒤처져 있으니, 밀린 묶음을 연달아 내지 않도록 지금 근처로 당긴다.
+	NextBatchSlotMinute = FMath::Max(NextBatchSlotMinute, Now - Settings.BatchJitterMinutes) + Settings.BatchPeriodMinutes;
+	NextBatchMinute = NextBatchSlotMinute + FMath::RandRange(-Settings.BatchJitterMinutes, Settings.BatchJitterMinutes);
 }
 
 void UQuestService::TickQuestClock()
@@ -146,11 +155,11 @@ void UQuestService::TickQuestClock()
 
 	if (Now >= NextBatchMinute)
 	{
-		IssueQuestBatch();
-		// 기준 시각만 한 주기 전진시켜 흔들림이 다음 예정 시각에 누적되지 않게 한다.
-		NextBatchSlotMinute += BatchPeriodMinutes;
-		NextBatchMinute = NextBatchSlotMinute + FMath::RandRange(-BatchJitterMinutes, BatchJitterMinutes);
-		bChanged = true;
+		if (const FQuestIssueSettings* Settings = FindIssueSettings())
+		{
+			IssueQuestBatch(*Settings);
+			bChanged = true;
+		}
 	}
 
 	// NPC가 집은 퀘스트는 만료 시각이 지나도 남긴다 — 진행 중인 Assignment가 가리키는 대상이 사라지면 안 된다.

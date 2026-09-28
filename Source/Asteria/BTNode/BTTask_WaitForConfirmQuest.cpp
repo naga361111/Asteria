@@ -6,40 +6,9 @@
 #include "AIController.h"
 #include "GameFramework/Pawn.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
-#include "Kismet/GameplayStatics.h"
 #include "NPC/AsteriaNpc.h"
 #include "GameState/AsteriaGameState.h"
 #include "GameState/Components/QuestService.h"
-
-namespace
-{
-	// NPC 기준 해당 종류의 가장 가까운 접근 지점(2D 거리). 없으면 null.
-	// MoveToApproachPoint.cpp와 같은 탐색 — 그 태스크를 건드리지 않기 위해 복제.
-	AApproachPointActor* FindNearestWaitPoint(UWorld* World, EApproachPointType Type, const FVector& Origin)
-	{
-		TArray<AActor*> Points;
-		UGameplayStatics::GetAllActorsOfClass(World, AApproachPointActor::StaticClass(), Points);
-
-		AApproachPointActor* Best = nullptr;
-		float BestDistSq = TNumericLimits<float>::Max();
-		for (AActor* Actor : Points)
-		{
-			AApproachPointActor* Point = Cast<AApproachPointActor>(Actor);
-			if (Point == nullptr || Point->PointType != Type)
-			{
-				continue;
-			}
-
-			const float DistSq = FVector::DistSquared2D(Origin, Point->GetActorLocation());
-			if (DistSq < BestDistSq)
-			{
-				BestDistSq = DistSq;
-				Best = Point;
-			}
-		}
-		return Best;
-	}
-}
 
 UBTTask_WaitForConfirmQuest::UBTTask_WaitForConfirmQuest()
 {
@@ -100,13 +69,16 @@ EBTNodeResult::Type UBTTask_WaitForConfirmQuest::ExecuteTask(UBehaviorTreeCompon
 
 	UE_LOG(LogTemp, Warning, TEXT("Wait For Assignment:%d Confirm"), WaitingAssignmentId)
 
-	// 대기 지점 탐색. 대기 자리는 연출이라 지점이 없어도 실패하지 않고 제자리에서 기다린다.
-	TargetPoint = FindNearestWaitPoint(Npc->GetWorld(), TargetType, Npc->GetActorLocation());
+	// 예약되지 않은 대기 지점 탐색. 대기 자리는 연출이라 지점이 없어도 실패하지 않고 제자리에서 기다린다.
+	TargetPoint = AApproachPointActor::FindNearestFree(Npc->GetWorld(), TargetType, Npc->GetActorLocation());
 	if (TargetPoint == nullptr)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("No wait point found. Waiting in place. Assignment:%d"), WaitingAssignmentId)
 		return EBTNodeResult::InProgress;
 	}
+
+	// 고르는 즉시 예약 — 다음 Npc는 이 자리를 건너뛰고 다음으로 가까운 빈 자리를 고른다. 해제는 OnTaskFinished.
+	TargetPoint->Occupant = Npc;
 
 	// 대기 지점으로 이동 요청.
 	const EPathFollowingRequestResult::Type MoveResult = AICon->MoveToActor(TargetPoint, AcceptableRadius);
@@ -218,6 +190,11 @@ void UBTTask_WaitForConfirmQuest::OnTaskFinished(UBehaviorTreeComponent& OwnerCo
 		}
 	}
 	UnbindMoveCompleted();
+	// 이 태스크가 예약한 자리를 해제한다.
+	if (TargetPoint != nullptr)
+	{
+		TargetPoint->Occupant.Reset();
+	}
 	TargetPoint = nullptr;
 	CachedOwnerComp.Reset();
 	bFacing = false;
