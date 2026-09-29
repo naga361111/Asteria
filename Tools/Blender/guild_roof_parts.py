@@ -1,6 +1,6 @@
 # PCG_GuildShell 박공지붕 부품 생성기. 실행:
 #   blender -b --factory-startup --python Tools/Blender/guild_roof_parts.py
-# 결과 FBX는 Intermediate/GuildRoof/ 에 쓰인다(언리얼 임포트는 Tools/Blender/import_guild_roof.py).
+# 결과 FBX는 Intermediate/GuildRoof/ 에 쓰인다(언리얼 임포트는 Tools/Blender/import_guild_parts.py).
 #
 # 좌표는 언리얼 기준(cm, X 앞, Y 오른쪽=건물 안쪽, Z 위)으로 적고 ue()로 Blender 좌표(m, Y 반전)로 바꾼다.
 # 지붕 기준(Hearthvale 300 격자, Tavern_C 벽 400):
@@ -51,8 +51,7 @@ class Builder:
         vb = [self.bm.verts.new(ue(p)) for p in bottom]
         vt = [self.bm.verts.new(ue(p)) for p in top]
         n = len(bottom)
-        rings = [(vb[::-1], bottom[::-1]), (vt, top)]
-        faces = [(r, pts) for r, pts in rings]
+        faces = [(vb[::-1], bottom[::-1]), (vt, top)]
         for i in range(n):
             j = (i + 1) % n
             faces.append(([vb[i], vb[j], vt[j], vt[i]], [bottom[i], bottom[j], top[j], top[i]]))
@@ -89,11 +88,11 @@ class Builder:
         return objs
 
 
-def planar_uv(size, axes):
+def planar_uv(size):
     """면 법선에 가장 가까운 축을 빼고 나머지 두 축으로 평면 투영."""
     def fn(p, n):
         a = max(range(3), key=lambda i: abs(n[i]))
-        u, v = [i for i in range(3) if i != a] if axes is None else axes[a]
+        u, v = [i for i in range(3) if i != a]
         return (p[u] / size, p[v] / size)
     return fn
 
@@ -149,11 +148,11 @@ def build_slope(name, length, slope_len, seed, barge=False, fascia=False):
             x = x1 + 1.2
     if fascia:
         # 처마 끝판: 너와 끝을 가리는 경사 수직 판.
-        slope_box(b, 0, length, -3.0, 0.0, -6.0, BOARD + SHINGLE_LIFT + SHINGLE_T + 2, MAT_SHINGLE, planar_uv(WOOD_UV, None))
+        slope_box(b, 0, length, -3.0, 0.0, -6.0, BOARD + SHINGLE_LIFT + SHINGLE_T + 2, MAT_SHINGLE, planar_uv(WOOD_UV))
     if barge:
         # 박공 끝판: 바깥(X=0)쪽 끝을 따라 세운 판.
         slope_box(b, -4.0, 0.0, -4.0 if fascia else 0.0, slope_len + 14.0, -12.0, BOARD + SHINGLE_LIFT + SHINGLE_T + 4, MAT_SHINGLE,
-                  planar_uv(WOOD_UV, None))
+                  planar_uv(WOOD_UV))
     return b.finish()
 
 
@@ -167,7 +166,7 @@ def build_ridge(name, length):
             return (x, side * (t + hh) * S45, (hh - t) * S45)
         ring_b = [fr(-6, 0, h), fr(-6, length, h), fr(32, length, h), fr(32, 0, h)]
         ring_t = [fr(-6, 0, h + 4), fr(-6, length, h + 4), fr(32, length, h + 4), fr(32, 0, h + 4)]
-        b.solid(ring_b, ring_t, MAT_SHINGLE, planar_uv(WOOD_UV, None))
+        b.solid(ring_b, ring_t, MAT_SHINGLE, planar_uv(WOOD_UV))
         b.ucx(ring_b, ring_t)
     return b.finish()
 
@@ -204,7 +203,7 @@ def build_eave_fill(name):
     prof = [(-44.0, 0.0), (6.0, 0.0), (6.0, 50.0)]
     bottom = [(0.0, y, z) for y, z in prof]
     top = [(300.0, y, z) for y, z in prof]
-    b.solid(bottom, top, MAT_SHINGLE, planar_uv(WOOD_UV, None))
+    b.solid(bottom, top, MAT_SHINGLE, planar_uv(WOOD_UV))
     b.ucx(bottom, top)
     return b.finish()
 
@@ -231,7 +230,6 @@ def main():
         ("SM_GuildRoof_EaveVerge", lambda n: build_slope(n, 75.0, 100.0 / S45, 14, barge=True, fascia=True)),
         ("SM_GuildRoof_Ridge", lambda n: build_ridge(n, 300.0)),
         ("SM_GuildRoof_GableSquare", lambda n: build_gable(n, False)),
-        ("SM_GuildRoof_GableTri", lambda n: build_gable(n, True)),
         ("SM_GuildRoof_GableSquare_Plaster", lambda n: build_gable(n, False, MAT_PLASTER, plaster_uv)),
         ("SM_GuildRoof_GableTri_Plaster", lambda n: build_gable(n, True, MAT_PLASTER, plaster_uv)),
         ("SM_GuildRoof_EaveFill", lambda n: build_eave_fill(n)),

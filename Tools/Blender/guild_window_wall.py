@@ -4,7 +4,7 @@
 #   Tavern_C의 걸레받이·중간 몰딩(240~278)도 붙이고, 중간 몰딩은 창틀 구간만 잘라낸다.
 #   D_Window 실내면의 곡선 장식 목재·밑단 목재는 옆 벽과 맞지 않아 뺀다.
 # 입력: Intermediate/HearthvaleRef/SM_Wall_Tavern_D_Window.fbx, SM_Wall_Tavern_C.fbx (UE에서 FBX로 내보낸 원본)
-# 출력: Intermediate/GuildWall/SM_GuildWall_Window.fbx  (임포트: Tools/Blender/import_guild_roof.py)
+# 출력: Intermediate/GuildWall/SM_GuildWall_Window.fbx  (임포트: Tools/Blender/import_guild_parts.py)
 # 실행: blender -b --factory-startup --python Tools/Blender/guild_window_wall.py
 import bpy, bmesh, os
 from mathutils import Vector
@@ -78,7 +78,7 @@ def main():
     kill = []
     for comp in islands(wb, list(wb.faces)):
         m = wmats[comp[0].material_index]
-        lo, hi = zr(comp)
+        hi = zr(comp)[1]
         if m == "MI_PlanksFLoor" or (m == "MI_Trim_Wood_A_Rough" and hi <= 0.15):
             kill += comp                      # 실내 곡선 장식·가로대, 밑단 목재
     bmesh.ops.delete(wb, geom=kill, context='FACES')
