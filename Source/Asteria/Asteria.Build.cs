@@ -16,7 +16,7 @@ public class Asteria : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[]
 			{ "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore", "AITestSuite" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore", "AITestSuite", "PCG" });
 
 		if (Target.bBuildDeveloperTools || (Target.Configuration != UnrealTargetConfiguration.Shipping &&
 		                                    Target.Configuration != UnrealTargetConfiguration.Test))

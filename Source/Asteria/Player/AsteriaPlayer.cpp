@@ -9,6 +9,7 @@
 #include "Interaction/Interactable.h"
 #include "GameState/AsteriaGameState.h"
 #include "GameState/Components/CounterService.h"
+#include "GameState/Components/GuildShellService.h"
 
 void AAsteriaPlayer::Server_AcceptQuestAssignment_Implementation(int32 AssignmentId)
 {
@@ -36,6 +37,23 @@ void AAsteriaPlayer::Server_SettleQuestAssignment_Implementation(int32 Assignmen
 	// 창구 앞에 있는지 못 막는 것도 위와 같다.
 	CounterService->SettleQuestAssignment(AssignmentId);
 }
+
+#if WITH_EDITOR
+void AAsteriaPlayer::ShellSize(int32 Width, int32 Height)
+{
+	Server_SetShellSize(Width, Height);
+}
+
+void AAsteriaPlayer::Server_SetShellSize_Implementation(int32 Width, int32 Height)
+{
+	AAsteriaGameState* GameState = GetWorld()->GetGameState<AAsteriaGameState>();
+	UGuildShellService* GuildShellService = GameState ? GameState->GuildShellService : nullptr;
+	if (GuildShellService == nullptr) return;
+
+	// 전달만 한다. 권위·범위 검증은 소유자(GuildShellService)가 한다.
+	GuildShellService->SetShellSize(Width, Height);
+}
+#endif
 
 // Sets default values
 AAsteriaPlayer::AAsteriaPlayer()
