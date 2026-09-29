@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 2bd14ed1-a135-4872-89e0-8e0d50adff5f
-  modified: 2026-09-29T04:57:09.311Z
+  modified: 2026-09-29T06:52:15.174Z
 ---
 
 2026-09-29 에디터 get_bounds로 잰 값. PCG 건물 생성은 `/Game/Map/PCG` 레벨에서 한다.
@@ -17,6 +17,7 @@ metadata:
 - 예외: PlanksFloor_A_Half는 300×164(150 아님). Entrance/Dbl은 450, Entrance_300은 300.
 - 계단: Wooden_A_150_Wide(수평 211, 폭 306, 높이 157), 100_Wide(133, 306, 100). 층고 400 = 150+150+100.
 - 400 벽(C) 문 조합(원본 PL_Tavern_A 배치 기준): Door_Frame_B_Cap(문 위 벽, 폭 180) + 문틀 Door_Frame_A(cap 기준 로컬 89,-10) + 문짝 Door_A_LT(3,-10,91.4, yaw+120)/RT(167,-10,91.4, yaw-120). 300 벽(A/D)은 Door_Frame_A_Cap 또는 D_Entrance_300. 원본도 벽을 0.8~1.3배 늘려 틈을 맞춤. cap 뒤 벽은 cap 끝(180)이 아니라 175에서 시작해야 함 — Half 시작 모서리가 드러나면 검은 세로 틈으로 보임(2026-09-29 실제 발생).
+- 카운터: `Furniture/SM_Tabletop_*`가 바 카운터 본체(높이 132, 깊이 107). Lt·Mid 피벗 같은 점, Mid 간격 300, Rt는 +600. 로컬 +Y 면이 격자(손님 쪽), 양 끝은 -Y(직원 쪽)로 꺾임. PCG 맵 `Counter_Module` 폴더에 yaw 180으로 배치함(2026-09-29).
 - 바운드는 장식 돌출 포함(Long이 625 등) — 배치는 공칭 크기로.
 
 **Why:** PCG 격자·벽 방향 규칙을 이 값에 맞춰야 이음새가 맞는다.
