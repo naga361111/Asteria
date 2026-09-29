@@ -12,4 +12,4 @@ metadata:
 
 **Why:** 길드 홀 복층 작업 중 이것 때문에 천장 판·들보·기둥·벽난로 구역 97개가 틀어졌다. 원본 레벨에서 변환값을 다시 읽어 와 복구해야 했다.
 
-**How to apply:** 액터를 옮기거나 크기를 바꿀 때는 먼저 get_actor_transform으로 현재 값을 읽고, location·rotation·scale 세 항목을 모두 채워서 넘긴다. 여러 개를 한꺼번에 옮기기 전에는 레벨을 저장해 복구 지점을 만든다. 관련: [[guild-hall-map-layout]]
+**How to apply:** 액터를 옮기거나 크기를 바꿀 때는 먼저 get_actor_transform으로 현재 값을 읽고, location·rotation·scale 세 항목을 모두 채워서 넘긴다. 여러 개를 한꺼번에 옮기기 전에는 레벨을 저장해 복구 지점을 만든다.

@@ -4,7 +4,6 @@ using namespace GuildShell;
 
 namespace
 {
-	constexpr double CeilingRise = 300.0;   // 지붕 밑면 시작(444)에서 평천장까지. 경사판 줄(150) 배수여야 한다.
 	constexpr int32 TrussEvery = 2;         // 트러스 간격(칸). 양 끝 박공벽 자리에는 두지 않는다.
 	constexpr double RafterInset = BeamHalf * UE_DOUBLE_INV_SQRT_2; // 서까래 중심을 판재 밑면에서 수직 10만큼 안쪽으로
 	constexpr double ChainLength = 68.0;    // SM_Chain_Line_a 한 마디
@@ -18,7 +17,6 @@ namespace
 void FGuildShellBuilder::BuildCeiling(TArray<double>& OutTrussU)
 {
 	// 평천장: 경사 천장이 CeilingRise까지만 오르고 가운데(Flat0~Flat1)는 평평. 짧은 변이 3칸보다 작으면 경사 천장만.
-	const bool bFlat = Span - 2.0 * CeilingRise >= Cell;
 	const double CeilingZ = RoofBase + CeilingRise;
 	const double Flat0 = CeilingRise;
 	const double Flat1 = Span - CeilingRise;
@@ -31,6 +29,8 @@ void FGuildShellBuilder::BuildCeiling(TArray<double>& OutTrussU)
 			{
 				// 판재는 모서리 피벗에서 +X·-Y로 뻗는다 → V+300 모서리에 놓으면 [V, V+300]을 덮는다. Z를 뒤집어 아래를 보게.
 				Add(Blocking, Mesh::CeilingPlank, i * Cell, V + Cell, CeilingZ, 0.0, Flip);
+				// 판재는 한 면(두께 0.5)이라 뒤집으면 윗면이 뒷면이 되어 햇빛 그림자를 안 만든다. 위를 보는 판으로 덮는다.
+				Add(Blocking, Mesh::CeilingPlank, i * Cell, V + Cell, CeilingZ + 1.0, 0.0);
 			}
 			// 테두리 보(경사 천장과 만나는 선)와 가운데 등뼈 보.
 			for (const double V : { Flat0, Half, Flat1 })
@@ -65,7 +65,7 @@ void FGuildShellBuilder::BuildCeiling(TArray<double>& OutTrussU)
 		{
 			Beam(Mesh::Rafter, U, Half, PostBottom, 0.0, 90.0, RoofBase + Half - 2.0 * BeamHalf - PostBottom);
 		}
-		for (int32 k = 0; k < S && (!bFlat || (k + 1) * Run <= CeilingRise + 1.0); ++k)
+		for (int32 k = 0; k < RoofRows; ++k)
 		{
 			const double Z = RoofBase + k * Run - RafterInset;
 			Beam(Mesh::Rafter, U, k * Run + RafterInset, Z, 90.0, 45.0, Run * UE_DOUBLE_SQRT_2);

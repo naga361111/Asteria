@@ -35,6 +35,8 @@ FGuildShellBuilder::FGuildShellBuilder(int32 InWidth, int32 InHeight, const FGui
 	, Len(L * Cell)
 	, Span(S * Cell)
 	, Half(S * Run)
+	, bFlat(Span - 2.0 * CeilingRise >= Cell)
+	, RoofRows(bFlat ? FMath::RoundToInt32(CeilingRise / Run) : S)
 {
 	const FVector2D Corners[4] = { FVector2D(0.0, 0.0), FVector2D(Len, 0.0), FVector2D(Len, Span), FVector2D(0.0, Span) };
 	const double Yaws[4] = { 0.0, 90.0, 180.0, -90.0 };

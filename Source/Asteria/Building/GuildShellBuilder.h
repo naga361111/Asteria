@@ -14,6 +14,7 @@ namespace GuildShell
 	constexpr double WallFace = 6.0;       // Tavern_C 실내 면(외곽선에서 안쪽으로 6)
 	constexpr double GableBase = WallOuter; // 지붕 밑면은 벽 바깥 윗모서리에서 45도로 오르므로 외곽선 위에서 44 높다
 	constexpr double RoofBase = WallTop + GableBase;
+	constexpr double CeilingRise = 300.0;   // 지붕 밑면 시작(444)에서 평천장까지. 경사판 줄(150) 배수여야 한다.
 	constexpr double BeamHalf = 10.0;      // 20×20 보·80폭 보의 반두께
 	constexpr double TieBeamZ = 430.0;     // 트러스 가로보 중심(420~440)
 
@@ -118,6 +119,8 @@ private:
 	double Len;
 	double Span;
 	double Half;    // 용마루까지 수평 거리
+	bool bFlat;     // 평천장인지(짧은 변 3칸 이상). 평천장 위는 실내에서 안 보여 짓지 않는다.
+	int32 RoofRows; // 짓는 경사판 줄 수: 평천장이면 천장 높이까지, 아니면 용마루까지
 	FWall Walls[4];
 
 	void BuildBase();

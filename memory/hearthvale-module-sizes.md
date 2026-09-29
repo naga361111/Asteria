@@ -21,4 +21,4 @@ metadata:
 - 바운드는 장식 돌출 포함(Long이 625 등) — 배치는 공칭 크기로.
 
 **Why:** PCG 격자·벽 방향 규칙을 이 값에 맞춰야 이음새가 맞는다.
-**How to apply:** 재측정 대신 이 값을 쓰고, 벽 안/밖 면 방향은 아직 눈으로 확인 안 함. 관련: [[guild-hall-map-layout]], [[hearthvale-occlusion-mask]]
+**How to apply:** 재측정 대신 이 값을 쓰고, 벽 안/밖 면 방향은 아직 눈으로 확인 안 함. 관련: [[hearthvale-occlusion-mask]]

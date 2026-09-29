@@ -12,11 +12,12 @@ namespace
 void FGuildShellBuilder::BuildRoof()
 {
 	// 경사판·처마·쐐기·용마루: A면은 V=0 벽에서, B면은 V=Span 벽에서 올라간다(B는 180도 돌려 같은 부품 사용).
+	// 평천장이면 천장 높이(RoofRows)까지만 짓고 용마루는 없다. 외관은 보지 않는다.
 	for (int32 i = 0; i < L; ++i)
 	{
 		const double U0 = i * Cell;
 		const double U1 = U0 + Cell;
-		for (int32 k = 0; k < S; ++k)
+		for (int32 k = 0; k < RoofRows; ++k)
 		{
 			Add(Blocking, Mesh::Slope, U0, k * Run, RoofBase + k * Run, 0.0);
 			Add(Blocking, Mesh::Slope, U1, Span - k * Run, RoofBase + k * Run, 180.0);
@@ -25,11 +26,14 @@ void FGuildShellBuilder::BuildRoof()
 		Add(Blocking, Mesh::Eave, U1, Span + EaveRun, RoofBase - EaveRun, 180.0);
 		Add(Blocking, Mesh::EaveFill, U0, 0.0, WallTop, 0.0);
 		Add(Blocking, Mesh::EaveFill, U1, Span, WallTop, 180.0);
-		Add(Blocking, Mesh::Ridge, U0, Half, RoofBase + Half, 0.0);
+		if (!bFlat)
+		{
+			Add(Blocking, Mesh::Ridge, U0, Half, RoofBase + Half, 0.0);
+		}
 	}
 
 	// 박공 쪽 돌출: 박공 끝판이 바깥 끝에 오도록 끝마다 X 부호를 바꾼다.
-	for (int32 k = 0; k < S; ++k)
+	for (int32 k = 0; k < RoofRows; ++k)
 	{
 		const double Z = RoofBase + k * Run;
 		Add(Blocking, Mesh::SlopeVerge, -VergeLen, k * Run, Z, 0.0);
@@ -41,16 +45,19 @@ void FGuildShellBuilder::BuildRoof()
 	Add(Blocking, Mesh::EaveVerge, Len + VergeLen, -EaveRun, RoofBase - EaveRun, 0.0, MirrorX);
 	Add(Blocking, Mesh::EaveVerge, -VergeLen, Span + EaveRun, RoofBase - EaveRun, 180.0, MirrorX);
 	Add(Blocking, Mesh::EaveVerge, Len + VergeLen, Span + EaveRun, RoofBase - EaveRun, 180.0);
-	Add(Blocking, Mesh::Ridge, -VergeLen, Half, RoofBase + Half, 0.0, FVector(VergeLen / Cell, 1.0, 1.0));
-	Add(Blocking, Mesh::Ridge, Len, Half, RoofBase + Half, 0.0, FVector(VergeLen / Cell, 1.0, 1.0));
+	if (!bFlat)
+	{
+		Add(Blocking, Mesh::Ridge, -VergeLen, Half, RoofBase + Half, 0.0, FVector(VergeLen / Cell, 1.0, 1.0));
+		Add(Blocking, Mesh::Ridge, Len, Half, RoofBase + Half, 0.0, FVector(VergeLen / Cell, 1.0, 1.0));
+	}
 }
 
 void FGuildShellBuilder::BuildGables()
 {
 	// 박공 창: 가운데 300 폭, 2층(300) 단위. 아랫단은 짧은 변 3칸 이상이면 큰 창,
-	// 위 단은 창 위에 깃발 자리(300)를 남길 수 있을 때만 좁은 창.
+	// 위 단은 창 위에 깃발 자리(300)를 남길 수 있을 때만 좁은 창. 평천장이면 천장 아래 단만.
 	int32 WindowPairs = 0;
-	while (S >= (WindowPairs == 0 ? 3 : 2 * WindowPairs + 5))
+	while (S >= (WindowPairs == 0 ? 3 : 2 * WindowPairs + 5) && 2 * (WindowPairs + 1) <= RoofRows)
 	{
 		++WindowPairs;
 	}
@@ -71,7 +78,7 @@ void FGuildShellBuilder::BuildGables()
 		auto BlockV = [&](double A) { return End == 0 ? A + Run : A; };
 
 		// 층 r은 양 끝이 150(r+1)씩 줄고, 끝은 삼각형(빗변이 지붕 밑면을 따라감). 창 자리는 비운다.
-		for (int32 r = 0; r < S; ++r)
+		for (int32 r = 0; r < RoofRows; ++r)
 		{
 			const double Z = RoofBase + r * Run;
 			for (int32 j = 0; j < 2 * (S - r - 1); ++j)
@@ -107,7 +114,8 @@ void FGuildShellBuilder::BuildGables()
 			auto FaceU = [&](double Lift) { return U + Face * (Base + Lift); };
 
 			// 층마다 가로대(150 간격 이음매를 가린다). 창 가운데를 지나는 줄은 창 칸만 비운다.
-			for (int32 r = 0; r < S; ++r)
+			// 평천장이면 천장과 만나는 줄(RoofRows)까지.
+			for (int32 r = 0; r < FMath::Min(RoofRows + 1, S); ++r)
 			{
 				const bool bMidWindow = (r % 2 == 1) && r < 2 * WindowPairs;
 				for (int32 m = 0; m < S - r; ++m)
@@ -126,7 +134,7 @@ void FGuildShellBuilder::BuildGables()
 				Beam(Mesh::Timber, FaceU(0.5), Half - Run, RoofBase, 90.0, 90.0, WindowTop - RoofBase);
 				Beam(Mesh::Timber, FaceU(0.5), Half + Run, RoofBase, 90.0, 90.0, WindowTop - RoofBase);
 			}
-			const double KingPostTop = RoofBase + Half - BeamHalf;
+			const double KingPostTop = RoofBase + RoofRows * Run - BeamHalf;
 			if (KingPostTop - WindowTop > 50.0)
 			{
 				Beam(Mesh::Timber, FaceU(0.5), Half, WindowTop, 90.0, 90.0, KingPostTop - WindowTop);
@@ -141,7 +149,7 @@ void FGuildShellBuilder::BuildGables()
 
 		// 깃발: 창 위 두 번째 가로대에 건다(아래로 약 2m). 바깥 면만.
 		const int32 BannerRow = 2 * WindowPairs + 2;
-		if (S >= BannerRow + 1)
+		if (S >= BannerRow + 1 && BannerRow <= RoofRows)
 		{
 			Add(Blocking, Mesh::GableBanner, U + Out * 48.0, Half, RoofBase + BannerRow * Run - 12.0, 90.0);
 		}

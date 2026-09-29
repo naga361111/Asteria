@@ -16,4 +16,4 @@ metadata:
 - **마법 = Docs의 마법 관련 내용 참고. 직업 시뮬에 마법을 접목.
 - **차별점(=심장): 모험가가 스탯 블록이 아니라 살아있는 효용-AI NPC.** 기존 IAUS·기억(Engram)·친밀도·소문 재활용. 단 이건 **나중에** 짓는다.
 
-관련: 세계관 원본은 [[../../bible/Asteria_World_Setting.md 및 Magic_System]] (리포 bible/ 폴더). 코드 작성 규율은 프로젝트 CLAUDE.md(코드는 사용자가 직접 타이핑).
+관련: 세계관 원본은 리포 bible/ 폴더(Asteria_World_Setting.md, Magic_System). 
