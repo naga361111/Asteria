@@ -68,14 +68,32 @@ bool UCounterService::ReceiveSettleQuestAssignment(int32 AssignmentId)
 	const FQuestAssignment* Assignment = QuestService->FindQuestAssignment(AssignmentId);
 	if (Assignment == nullptr || Assignment->State != EQuestAssignmentState::SettleConfirmed) return false;
 
-	// 실패한 퀘스트는 수령만 하고 적립하지 않는다 — 지급 근거(명성 표)가 필요 없으니 조회하지 않는다.
 	// 값으로 복사해 둔다 — 수령 뒤 위 포인터는 무효.
 	const bool bQuestFailed = Assignment->bQuestFailed;
-	if (bQuestFailed) return QuestService->ReceiveSettleQuestAssignment(AssignmentId);
-
 	const int32 QuestId = Assignment->QuestId;
 	const FQuest* Quest = QuestService->QuestPull.FindByPredicate(
 		[QuestId](const FQuest& Q) { return Q.QuestId == QuestId; });
+
+	// 실패한 퀘스트는 적립하지 않고, 수령 뒤 퀘스트 등급의 명성만큼 차감한다.
+	// 수령 후엔 퀘스트가 보드로 돌아가거나 지워질 수 있어 등급은 수령 전에 값으로 복사해 둔다.
+	if (bQuestFailed)
+	{
+		const bool bHasQuest = Quest != nullptr;
+		const ERank QuestRank = bHasQuest ? Quest->QuestRnk : ERank::F;
+		if (!QuestService->ReceiveSettleQuestAssignment(AssignmentId)) return false;
+
+		// 퀘스트가 없으면 차감만 건너뛴다 — 수령은 막지 않는다.
+		if (bHasQuest)
+		{
+			GuildService->LoseQuestReputation(QuestRank);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("CounterService: quest %d not found for failed assignment %d. Reputation loss skipped."), QuestId, AssignmentId);
+		}
+		return true;
+	}
+
 	if (Quest == nullptr) return false;
 
 	// 얻을 명성은 퀘스트 등급으로 명성 표에서 조회한다. 표가 없거나 등급이 빠져 있으면 적립할 값을 알 수 없다.
@@ -94,6 +112,23 @@ bool UCounterService::ReceiveSettleQuestAssignment(int32 AssignmentId)
 	GuildService->AddGuildFunds(Commission);
 	GuildService->AddGuildReputation(ReputationGain);
 	return true;
+}
+
+bool UCounterService::LoseQuestAssignmentReputation(int32 AssignmentId)
+{
+	UQuestService* QuestService = GetQuestService();
+	UGuildService* GuildService = GetGuildService();
+	if (QuestService == nullptr || GuildService == nullptr) return false;
+
+	const FQuestAssignment* Assignment = QuestService->FindQuestAssignment(AssignmentId);
+	if (Assignment == nullptr) return false;
+
+	const int32 QuestId = Assignment->QuestId;
+	const FQuest* Quest = QuestService->QuestPull.FindByPredicate(
+		[QuestId](const FQuest& Q) { return Q.QuestId == QuestId; });
+	if (Quest == nullptr) return false;
+
+	return GuildService->LoseQuestReputation(Quest->QuestRnk);
 }
 
 bool UCounterService::IsQuestAssignmentSubmitted(int32 AssignmentId) const

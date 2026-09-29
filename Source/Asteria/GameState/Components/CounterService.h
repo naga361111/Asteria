@@ -50,8 +50,12 @@ public:
 
 	// NPC가 창구에서 정산을 수령한다(SettleConfirmed→Settled). 수수료는 길드 자금에, 퀘스트 등급의 명성은 길드 명성에 적립한다.
 	// 지급은 수령 순간 서버에서. 수령 후엔 Assignment·퀘스트가 제거되므로 지급 근거는 수령 전에 모두 확보한다.
-	// 실패한 퀘스트(bQuestFailed)는 수령만 하고 아무것도 적립하지 않는다.
+	// 실패한 퀘스트(bQuestFailed)는 적립하지 않고, 수령 뒤 그 퀘스트 등급의 명성만큼 길드 명성을 차감한다.
 	bool ReceiveSettleQuestAssignment(int32 AssignmentId);
+
+	// Assignment의 퀘스트 등급의 명성만큼 길드 명성을 차감한다. 대기 시간 초과로 창구를 떠나는 NPC의 퀘스트 취소용.
+	// 실패(서비스 없음/Assignment 없음/퀘스트가 QuestPull에 없음/차감 거절) 시 false.
+	bool LoseQuestAssignmentReputation(int32 AssignmentId);
 
 	// 제출 여부는 Assignment의 State에서 파생한다.
 	bool IsQuestAssignmentSubmitted(int32 AssignmentId) const;

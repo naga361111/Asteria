@@ -9,6 +9,7 @@
 #include "NPC/AsteriaNpc.h"
 #include "GameState/AsteriaGameState.h"
 #include "GameState/Components/QuestService.h"
+#include "GameState/Components/CounterService.h"
 #include "GameState/Components/GameClockService.h"
 
 UBTTask_WaitForSettleConfirm::UBTTask_WaitForSettleConfirm()
@@ -162,6 +163,12 @@ void UBTTask_WaitForSettleConfirm::TickTask(UBehaviorTreeComponent& OwnerComp, u
 	if (GameClock.IsValid() && GameClock->GetGameMinutes() >= ExpireGameMinute)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Settle wait timed out. Assignment:%d"), WaitingAssignmentId)
+		// 정산 못 받고 떠나므로 그 등급만큼 길드 명성 차감. 수령(ReceiveSettle)에 도달하지 않으니 차감은 여기서 한 번뿐.
+		AAsteriaGameState* GS = OwnerComp.GetWorld()->GetGameState<AAsteriaGameState>();
+		if (UCounterService* Counter = GS ? GS->CounterService : nullptr)
+		{
+			Counter->LoseQuestAssignmentReputation(WaitingAssignmentId);
+		}
 		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
 		return;
 	}

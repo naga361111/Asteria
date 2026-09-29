@@ -7,6 +7,7 @@
 #include "NPC/AsteriaNpc.h"
 #include "GameState/AsteriaGameState.h"
 #include "GameState/Components/QuestService.h"
+#include "GameState/Components/GuildService.h"
 
 EBTNodeResult::Type UBTTask_SelectQuest::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
@@ -29,9 +30,15 @@ EBTNodeResult::Type UBTTask_SelectQuest::ExecuteTask(UBehaviorTreeComponent& Own
 	const int32 QuestId = QuestService->FindAvailableQuestId(Npc->NpcRnk);
 	if (QuestId == INDEX_NONE)
 	{
+		// 집을 퀘스트가 없어 못 잡았다 — NPC 등급을 퀘스트 등급으로 보고 그만큼 길드 명성을 차감한다.
+		if (UGuildService* GuildService = GameState->GuildService)
+		{
+			GuildService->LoseQuestReputation(Npc->NpcRnk);
+		}
 		return EBTNodeResult::Failed;
 	}
 
+	// 다른 NPC가 먼저 집어 거절된 경우는 의도한 루트가 아니므로 차감하지 않는다.
 	if (QuestService->AssignQuest(QuestId, { Npc->NpcId }) == INDEX_NONE)
 	{
 		return EBTNodeResult::Failed;

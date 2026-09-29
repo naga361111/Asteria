@@ -9,6 +9,7 @@
 #include "NPC/AsteriaNpc.h"
 #include "GameState/AsteriaGameState.h"
 #include "GameState/Components/QuestService.h"
+#include "GameState/Components/CounterService.h"
 #include "GameState/Components/GameClockService.h"
 
 UBTTask_WaitForConfirmQuest::UBTTask_WaitForConfirmQuest()
@@ -162,6 +163,12 @@ void UBTTask_WaitForConfirmQuest::TickTask(UBehaviorTreeComponent& OwnerComp, ui
 	if (GameClock.IsValid() && GameClock->GetGameMinutes() >= ExpireGameMinute)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Confirm wait timed out. Assignment:%d"), WaitingAssignmentId)
+		// 기다리다 떠나며 퀘스트가 취소되므로 그 등급만큼 길드 명성 차감. Assignment는 아직 Submitted(반환은 뒤따르는 떠나기 가지).
+		AAsteriaGameState* GS = OwnerComp.GetWorld()->GetGameState<AAsteriaGameState>();
+		if (UCounterService* Counter = GS ? GS->CounterService : nullptr)
+		{
+			Counter->LoseQuestAssignmentReputation(WaitingAssignmentId);
+		}
 		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
 		return;
 	}
