@@ -29,7 +29,6 @@ Docs/Asteria_Magic_System.md 참고
 
 ## 개선점 (2026-09-29 길드 건물 PCG 리팩터링 검증)
 
-2. [빌드 위험] `Building/GuildShellBuilder·Roof·Interior.cpp` 맨 위 `using namespace GuildShell;` — 유니티 빌드(.cpp 이어 붙여 컴파일)에서 뒤 파일들로 Cell·Run·Mesh 등이 새어 나감. 해결: 빌더를 `namespace GuildShell` 안으로, .cpp를 `namespace GuildShell { }`로 감싸기. 에디터 닫고 클린 빌드로 확인.
 3. [확장성] 건물이 월드 원점 고정 — `PCGGuildShellSettings.cpp` 노드가 볼륨 위치·회전을 무시. 해결: PCG 실행 정보(ExecutionSource)의 볼륨 트랜스폼/경계 최소 모서리를 모든 점에 적용.
 4. [개발 편의] C++ 상수 변경 후 Live Coding 해도 PCG 캐시로 옛 결과 — 해결: `FPCGGuildShellElement`에 `IsCacheable` → false.
 5. [검증] 리팩터링 스냅샷이 `Saved/`(git 제외)에만 있고 스크립트 없음 — 해결: `FGuildShellBuilder` 크기·문 조합별 메시 개수 자동 테스트(CQTest).

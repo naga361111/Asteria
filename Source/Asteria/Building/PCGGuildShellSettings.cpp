@@ -79,7 +79,7 @@ bool FPCGGuildShellElement::ExecuteInternal(FPCGContext* Context) const
 		MakeDoor(Settings->bDoorPosY, Settings->DoorPosYOffset),
 		MakeDoor(Settings->bDoorNegX, Settings->DoorNegXOffset),
 	};
-	const FGuildShellBuilder Shell(
+	const GuildShell::FGuildShellBuilder Shell(
 		FMath::Clamp(Settings->ShellWidth, 1, UPCGGuildShellSettings::MaxCells),
 		FMath::Clamp(Settings->ShellHeight, 1, UPCGGuildShellSettings::MaxCells),
 		Doors);

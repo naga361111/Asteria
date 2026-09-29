@@ -65,80 +65,80 @@ namespace GuildShell
 			FSoftObjectPath(TEXT("/Game/Hearthvale/Meshes/Fabric/SM_Banner_e.SM_Banner_e")),
 		};
 	}
-}
 
-// 점마다 메시 경로를 단 배치 목록.
-struct FGuildShellMeshPoints
-{
-	TArray<FTransform> Transforms;
-	TArray<FSoftObjectPath> Meshes;
-};
-
-/**
- * 칸 수와 문 설정으로 길드 건물 배치를 계산한다. PCG와 무관한 순수 계산.
- *
- * 좌표: 건물 기준 좌표(U=용마루 방향, V=경사 방향)에서 계산하고, 세로가 더 길면 90도 돌려 월드에 놓는다.
- * 외곽선은 월드 원점에서 (가로×300, 세로×300)까지. 용마루는 긴 변을 따라가고, 같으면 X 방향.
- *
- * 기능별 구현 파일:
- *   GuildShellBuilder.cpp  — 좌표 틀, 바닥·모서리 기둥·띠보, 외곽 벽·창 벽·문
- *   GuildShellRoof.cpp     — 지붕, 박공벽
- *   GuildShellInterior.cpp — 평천장·트러스, 장식·조명
- */
-class FGuildShellBuilder
-{
-public:
-	// Doors: 월드 변 순서 NegY, PosX, PosY, NegX.
-	FGuildShellBuilder(int32 InWidth, int32 InHeight, const FGuildShellDoor (&Doors)[4]);
-
-	FGuildShellMeshPoints Blocking;    // 충돌 있음
-	FGuildShellMeshPoints NoCollision; // 바닥·모서리 기둥·띠보·문틀·문짝(통로를 막지 않게)
-	TArray<FTransform> Lights;         // 매단 랜턴 조명 자리
-	TArray<FTransform> SconceLights;   // 벽 등 조명 자리
-
-private:
-	// 외곽 벽 하나. 위에서 볼 때 시계 방향으로 돌고, 실내는 진행 방향 기준 로컬 +Y 쪽이다.
-	// 0 = A면(V=0), 1 = U=Len 박공, 2 = B면(V=Span), 3 = U=0 박공.
-	struct FWall
+	// 점마다 메시 경로를 단 배치 목록.
+	struct FGuildShellMeshPoints
 	{
-		FVector2D Start;
-		FVector2D Dir;
-		double Yaw = 0.0;
-		int32 Cells = 0;
-		double DoorAlong = -1.0;        // 문 중심(벽 시작에서 잰 거리), 문 없으면 음수
-		TArray<FVector2D> Openings;     // 문·창 구간(벽 시작에서 잰 거리). 장식이 피한다.
-
-		FVector2D Inward() const { return FVector2D(-Dir.Y, Dir.X); }
+		TArray<FTransform> Transforms;
+		TArray<FSoftObjectPath> Meshes;
 	};
 
-	int32 Width;
-	int32 Height;
-	bool bSwap;     // 세로가 더 길어 90도 돌려 놓는지
-	int32 L;        // 긴 변 칸 수(용마루 방향)
-	int32 S;        // 짧은 변 칸 수(경사 방향)
-	double Len;
-	double Span;
-	double Half;    // 용마루까지 수평 거리
-	bool bFlat;     // 평천장인지(짧은 변 3칸 이상). 평천장 위는 실내에서 안 보여 짓지 않는다.
-	int32 RoofRows; // 짓는 경사판 줄 수: 평천장이면 천장 높이까지, 아니면 용마루까지
-	FWall Walls[4];
+	/**
+	 * 칸 수와 문 설정으로 길드 건물 배치를 계산한다. PCG와 무관한 순수 계산.
+	 *
+	 * 좌표: 건물 기준 좌표(U=용마루 방향, V=경사 방향)에서 계산하고, 세로가 더 길면 90도 돌려 월드에 놓는다.
+	 * 외곽선은 월드 원점에서 (가로×300, 세로×300)까지. 용마루는 긴 변을 따라가고, 같으면 X 방향.
+	 *
+	 * 기능별 구현 파일:
+	 *   GuildShellBuilder.cpp  — 좌표 틀, 바닥·모서리 기둥·띠보, 외곽 벽·창 벽·문
+	 *   GuildShellRoof.cpp     — 지붕, 박공벽
+	 *   GuildShellInterior.cpp — 평천장·트러스, 장식·조명
+	 */
+	class FGuildShellBuilder
+	{
+	public:
+		// Doors: 월드 변 순서 NegY, PosX, PosY, NegX.
+		FGuildShellBuilder(int32 InWidth, int32 InHeight, const FGuildShellDoor (&Doors)[4]);
 
-	void BuildBase();
-	void BuildWalls();
-	void BuildRoof();
-	void BuildGables();
-	void BuildCeiling(TArray<double>& OutTrussU);
-	void BuildDecor(const TArray<double>& TrussU);
+		FGuildShellMeshPoints Blocking;    // 충돌 있음
+		FGuildShellMeshPoints NoCollision; // 바닥·모서리 기둥·띠보·문틀·문짝(통로를 막지 않게)
+		TArray<FTransform> Lights;         // 매단 랜턴 조명 자리
+		TArray<FTransform> SconceLights;   // 벽 등 조명 자리
 
-	FVector ToWorld(double U, double V, double Z) const;
-	void Add(FGuildShellMeshPoints& Out, const FSoftObjectPath& Mesh, double U, double V, double Z, double Yaw,
-		FVector Scale = FVector::OneVector, double Pitch = 0.0);
-	// Blocking에 기본 치수 300인 보를 Length 길이로 늘려 놓는다.
-	void Beam(const FSoftObjectPath& Mesh, double U, double V, double Z, double Yaw, double Pitch, double Length);
-	// 벽 Side를 따라: Along = 벽 시작에서 진행 방향 거리, Lateral = 실내 쪽 거리.
-	void AddOnWall(FGuildShellMeshPoints& Out, const FSoftObjectPath& Mesh, int32 Side, double Along, double Lateral, double Z,
-		double YawOffset = 0.0, FVector Scale = FVector::OneVector);
-	void AddLight(TArray<FTransform>& Out, double U, double V, double Z) const;
-	// 벽 Side의 Along 위치(±HalfWidth)가 문·창 구간과 겹치는지.
-	bool IsOpen(int32 Side, double Along, double HalfWidth) const;
-};
+	private:
+		// 외곽 벽 하나. 위에서 볼 때 시계 방향으로 돌고, 실내는 진행 방향 기준 로컬 +Y 쪽이다.
+		// 0 = A면(V=0), 1 = U=Len 박공, 2 = B면(V=Span), 3 = U=0 박공.
+		struct FWall
+		{
+			FVector2D Start;
+			FVector2D Dir;
+			double Yaw = 0.0;
+			int32 Cells = 0;
+			double DoorAlong = -1.0;        // 문 중심(벽 시작에서 잰 거리), 문 없으면 음수
+			TArray<FVector2D> Openings;     // 문·창 구간(벽 시작에서 잰 거리). 장식이 피한다.
+
+			FVector2D Inward() const { return FVector2D(-Dir.Y, Dir.X); }
+		};
+
+		int32 Width;
+		int32 Height;
+		bool bSwap;     // 세로가 더 길어 90도 돌려 놓는지
+		int32 L;        // 긴 변 칸 수(용마루 방향)
+		int32 S;        // 짧은 변 칸 수(경사 방향)
+		double Len;
+		double Span;
+		double Half;    // 용마루까지 수평 거리
+		bool bFlat;     // 평천장인지(짧은 변 3칸 이상). 평천장 위는 실내에서 안 보여 짓지 않는다.
+		int32 RoofRows; // 짓는 경사판 줄 수: 평천장이면 천장 높이까지, 아니면 용마루까지
+		FWall Walls[4];
+
+		void BuildBase();
+		void BuildWalls();
+		void BuildRoof();
+		void BuildGables();
+		void BuildCeiling(TArray<double>& OutTrussU);
+		void BuildDecor(const TArray<double>& TrussU);
+
+		FVector ToWorld(double U, double V, double Z) const;
+		void Add(FGuildShellMeshPoints& Out, const FSoftObjectPath& Mesh, double U, double V, double Z, double Yaw,
+			FVector Scale = FVector::OneVector, double Pitch = 0.0);
+		// Blocking에 기본 치수 300인 보를 Length 길이로 늘려 놓는다.
+		void Beam(const FSoftObjectPath& Mesh, double U, double V, double Z, double Yaw, double Pitch, double Length);
+		// 벽 Side를 따라: Along = 벽 시작에서 진행 방향 거리, Lateral = 실내 쪽 거리.
+		void AddOnWall(FGuildShellMeshPoints& Out, const FSoftObjectPath& Mesh, int32 Side, double Along, double Lateral, double Z,
+			double YawOffset = 0.0, FVector Scale = FVector::OneVector);
+		void AddLight(TArray<FTransform>& Out, double U, double V, double Z) const;
+		// 벽 Side의 Along 위치(±HalfWidth)가 문·창 구간과 겹치는지.
+		bool IsOpen(int32 Side, double Along, double HalfWidth) const;
+	};
+}
