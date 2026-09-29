@@ -28,10 +28,13 @@ namespace
 	constexpr double WallBannerTop = 392.0; // 벽 윗단 나무 띠 위쪽에 건다
 	constexpr double DoorClearance = 40.0; // 장식은 문 양옆으로 이만큼 더 비운다
 	constexpr double DoorHalfWidth = 90.0; // 문 위 벽(Door_Frame_B_Cap) 폭 180의 절반
-	constexpr double SeamOverlap = 5.0;    // 문 옆 조각이 문 쪽으로 겹치는 폭(끝 모서리가 문틀 뒤로 숨음)
+	constexpr double SeamOverlap = 5.0;
+	constexpr double LanternLightDrop = 10.0; // 매단 랜턴 조명: 랜턴 바닥 아래 거리
+	constexpr double WindowHalfWidth = 70.0; // 창 벽의 창틀 반폭(56) + 여유. 장식이 이 구간을 피한다    // 문 옆 조각이 문 쪽으로 겹치는 폭(끝 모서리가 문틀 뒤로 숨음)
 
 	const FName MeshAttribute(TEXT("Mesh"));
 	const FName LightsPin(TEXT("Lights"));
+	const FName SconceLightsPin(TEXT("SconceLights"));
 	const FName DoorPartsPin(TEXT("DoorParts"));
 
 	struct FRoofPoint
@@ -88,6 +91,7 @@ UPCGGuildRoofSettings::UPCGGuildRoofSettings()
 	const FString Hv = TEXT("/Game/Hearthvale/Meshes/");
 	WallMesh = FSoftObjectPath(Hv + TEXT("Walls/SM_Wall_Tavern_C.SM_Wall_Tavern_C"));
 	WallHalfMesh = FSoftObjectPath(Hv + TEXT("Walls/SM_Wall_Tavern_C_Half.SM_Wall_Tavern_C_Half"));
+	WindowWallMesh = FSoftObjectPath(TEXT("/Game/Map/Building/Meshes/Walls/SM_GuildWall_Window.SM_GuildWall_Window"));
 	DoorCapMesh = FSoftObjectPath(Hv + TEXT("Walls/SM_Door_Frame_B_Cap.SM_Door_Frame_B_Cap"));
 	DoorFrameMesh = FSoftObjectPath(Hv + TEXT("Doors/SM_Door_Frame_A.SM_Door_Frame_A"));
 	DoorLeftMesh = FSoftObjectPath(Hv + TEXT("Doors/SM_Door_A_LT.SM_Door_A_LT"));
@@ -124,6 +128,7 @@ TArray<FPCGPinProperties> UPCGGuildRoofSettings::OutputPinProperties() const
 	Pins.Emplace(PCGPinConstants::DefaultOutputLabel, EPCGDataType::Point);
 	Pins.Emplace(LightsPin, EPCGDataType::Point);
 	Pins.Emplace(DoorPartsPin, EPCGDataType::Point);
+	Pins.Emplace(SconceLightsPin, EPCGDataType::Point);
 	return Pins;
 }
 
@@ -151,6 +156,7 @@ bool FPCGGuildRoofElement::ExecuteInternal(FPCGContext* Context) const
 	TArray<FTransform> Transforms;
 	TArray<FSoftObjectPath> Meshes;
 	TArray<FTransform> Lights;
+	TArray<FTransform> SconceLights;
 	TArray<FTransform> DoorTransforms;
 	TArray<FSoftObjectPath> DoorMeshes;
 	auto ToWorld = [&](double U, double V, double Z)
@@ -162,9 +168,9 @@ bool FPCGGuildRoofElement::ExecuteInternal(FPCGContext* Context) const
 		Transforms.Emplace(FRotator(Pitch, Yaw + (bSwap ? 90.0 : 0.0), 0.0), ToWorld(U, V, Z), Scale);
 		Meshes.Add(Mesh.ToSoftObjectPath());
 	};
-	auto AddLight = [&](double U, double V, double Z)
+	auto AddLight = [&](TArray<FTransform>& Target, double U, double V, double Z)
 	{
-		Lights.Emplace(FRotator::ZeroRotator, ToWorld(U, V, Z));
+		Target.Emplace(FRotator::ZeroRotator, ToWorld(U, V, Z));
 	};
 	const FVector MirrorX(-1.0, 1.0, 1.0);
 
@@ -178,6 +184,7 @@ bool FPCGGuildRoofElement::ExecuteInternal(FPCGContext* Context) const
 		{ FVector(0.0, Height * Cell, 0.0), FVector(0.0, -1.0, 0.0), Height, Settings->bDoorNegX, Settings->DoorNegXOffset },
 	};
 	double DoorAlong[4] = { -1.0, -1.0, -1.0, -1.0 };
+	TArray<double> WindowAlong[4]; // 창 칸 가운데(변 시작에서 잰 거리)
 	for (int32 Side = 0; Side < 4; ++Side)
 	{
 		if (Sides[Side].bDoor)
@@ -210,9 +217,16 @@ bool FPCGGuildRoofElement::ExecuteInternal(FPCGContext* Context) const
 
 			for (int32 i = 0; i < W.Cells; ++i)
 			{
-				if (i < First || i > Last)
+				if (i >= First && i <= Last)
 				{
-					Place(Transforms, Meshes, Settings->WallMesh, i * Cell, 0.0, 0.0);
+					continue;
+				}
+				// 양 끝에서 센 번호가 홀수인 칸에 창(좌우 대칭).
+				const bool bWindow = Settings->bWallWindows && FMath::Min(i, W.Cells - 1 - i) % 2 == 1;
+				Place(Transforms, Meshes, bWindow ? Settings->WindowWallMesh : Settings->WallMesh, i * Cell, 0.0, 0.0);
+				if (bWindow)
+				{
+					WindowAlong[Side].Add(i * Cell + Cell * 0.5);
 				}
 			}
 			if (!bDoor)
@@ -236,17 +250,13 @@ bool FPCGGuildRoofElement::ExecuteInternal(FPCGContext* Context) const
 		}
 	}
 
-	// 문 자리(기준 좌표). 벽 기둥·벽 등·깃발이 피한다. 0=A면(V=0), 1=B면(V=Span), 2=U=0 박공, 3=U=Len 박공.
+	// 문·창 자리(기준 좌표). 벽 기둥·벽 등·깃발이 피한다. 0=A면(V=0), 1=B면(V=Span), 2=U=0 박공, 3=U=Len 박공.
 	TArray<FVector2D> DoorSpans[4];
-	for (int32 Side = 0; Side < 4; ++Side)
+	auto AddSpan = [&](int32 Side, double AlongCenter, double HalfWidth)
 	{
-		if (DoorAlong[Side] < 0.0)
-		{
-			continue;
-		}
 		// 변 진행 거리 → 월드 X(0·2번 변) 또는 Y(1·3번 변). 2·3번 변은 반대 방향으로 진행한다.
-		const double World = Side < 2 ? DoorAlong[Side] : Sides[Side].Cells * Cell - DoorAlong[Side];
-		const FVector2D Along(World - DoorHalfWidth - DoorClearance, World + DoorHalfWidth + DoorClearance);
+		const double World = Side < 2 ? AlongCenter : Sides[Side].Cells * Cell - AlongCenter;
+		const FVector2D Along(World - HalfWidth, World + HalfWidth);
 		// 회전하지 않으면 NegY/PosY가 A/B면, NegX/PosX가 U=0/U=Len 박공.
 		// 회전하면 월드 X = Span - V, 월드 Y = U 이므로 PosX/NegX가 A/B면, NegY/PosY가 U=0/U=Len 박공.
 		int32 Wall;
@@ -264,8 +274,18 @@ bool FPCGGuildRoofElement::ExecuteInternal(FPCGContext* Context) const
 			}
 		}
 		DoorSpans[Wall].Add(Range);
+	};
+	for (int32 Side = 0; Side < 4; ++Side)
+	{
+		if (DoorAlong[Side] >= 0.0)
+		{
+			AddSpan(Side, DoorAlong[Side], DoorHalfWidth + DoorClearance);
+		}
+		for (const double A : WindowAlong[Side])
+		{
+			AddSpan(Side, A, WindowHalfWidth);
+		}
 	}
-
 	// 경사판·처마·쐐기·용마루: A면은 V=0 벽에서, B면은 V=Span 벽에서 올라간다(B는 180도 돌려 같은 부품 사용).
 	for (int32 i = 0; i < L; ++i)
 	{
@@ -533,7 +553,8 @@ bool FPCGGuildRoofElement::ExecuteInternal(FPCGContext* Context) const
 					Add(Settings->ChainMesh, U, V, Z, 0.0);
 				}
 				Add(Settings->HangingLanternMesh, U, V, Z - LanternHeight, 0.0);
-				AddLight(U, V, Z - LanternHeight * 0.5);
+				// 랜턴 속에 두면 랜턴 틀이 그림자로 빛을 가린다 → 바닥 바로 아래에 둔다(유리는 자체 발광).
+				AddLight(Lights, U, V, Z - LanternHeight - LanternLightDrop);
 			}
 			// 긴 벽 기둥 + 45도 버팀대, 기둥에 벽 등.
 			for (int32 Wall = 0; Wall < 2; ++Wall)
@@ -547,7 +568,7 @@ bool FPCGGuildRoofElement::ExecuteInternal(FPCGContext* Context) const
 				Vertical(U, V, 0.0, TieBeamZ - BeamHalf);
 				Add(Settings->RafterMesh, U, V + Dir * BeamHalf, TieBeamZ - BeamHalf - 90.0, Dir > 0 ? 90.0 : -90.0, BraceScale, 45.0);
 				Add(Settings->SconceMesh, U, V + Dir * BeamHalf, SconceZ, Dir > 0 ? 90.0 : -90.0);
-				AddLight(U, V + Dir * 45.0, SconceZ);
+				AddLight(SconceLights, U, V + Dir * 45.0, SconceZ);
 			}
 		}
 
@@ -576,16 +597,21 @@ bool FPCGGuildRoofElement::ExecuteInternal(FPCGContext* Context) const
 			}
 		}
 
-		// 박공 벽(짧은 변) 안쪽: 양쪽 1/4 지점에 벽 등.
+		// 박공 벽(짧은 변) 안쪽: 1/4 지점에서 가장 가까운 칸 경계(창 가운데를 가리지 않게)에 벽 등.
+		const double SconceV = FMath::RoundToDouble(Span * 0.25 / Cell) * Cell;
 		for (int32 End = 0; End < 2; ++End)
 		{
 			const double U = End == 0 ? WallFace : Len - WallFace;
-			for (const double V : { Span * 0.25, Span * 0.75 })
+			if (SconceV <= 0.0 || SconceV >= Span * 0.5)
+			{
+				continue;
+			}
+			for (const double V : { SconceV, Span - SconceV })
 			{
 				if (!Blocked(2 + End, V, 40.0))
 				{
 					Add(Settings->SconceMesh, U, V, SconceZ, End == 0 ? 0.0 : 180.0);
-					AddLight(U + (End == 0 ? 35.0 : -35.0), V, SconceZ);
+					AddLight(SconceLights, U + (End == 0 ? 35.0 : -35.0), V, SconceZ);
 				}
 			}
 		}
@@ -600,5 +626,8 @@ bool FPCGGuildRoofElement::ExecuteInternal(FPCGContext* Context) const
 	FPCGTaggedData& DoorOut = Context->OutputData.TaggedData.Emplace_GetRef();
 	DoorOut.Data = MakePointData(Context, DoorTransforms, &DoorMeshes);
 	DoorOut.Pin = DoorPartsPin;
+	FPCGTaggedData& SconceOut = Context->OutputData.TaggedData.Emplace_GetRef();
+	SconceOut.Data = MakePointData(Context, SconceLights, nullptr);
+	SconceOut.Pin = SconceLightsPin;
 	return true;
 }

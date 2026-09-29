@@ -168,6 +168,7 @@ def build_ridge(name, length):
         ring_b = [fr(-6, 0, h), fr(-6, length, h), fr(32, length, h), fr(32, 0, h)]
         ring_t = [fr(-6, 0, h + 4), fr(-6, length, h + 4), fr(32, length, h + 4), fr(32, 0, h + 4)]
         b.solid(ring_b, ring_t, MAT_SHINGLE, planar_uv(WOOD_UV, None))
+        b.ucx(ring_b, ring_t)
     return b.finish()
 
 
@@ -204,6 +205,7 @@ def build_eave_fill(name):
     bottom = [(0.0, y, z) for y, z in prof]
     top = [(300.0, y, z) for y, z in prof]
     b.solid(bottom, top, MAT_SHINGLE, planar_uv(WOOD_UV, None))
+    b.ucx(bottom, top)
     return b.finish()
 
 
@@ -211,8 +213,8 @@ def export(objs, fname):
     bpy.ops.object.select_all(action="DESELECT")
     for o in objs:
         o.select_set(True)
-    bpy.ops.export_scene.fbx(filepath=os.path.join(OUT, fname + ".fbx"), use_selection=True, apply_unit_scale=True,
-                             apply_scale_options="FBX_SCALE_UNITS", mesh_smooth_type="FACE", add_leaf_bones=False,
+    bpy.ops.export_scene.fbx(filepath=os.path.join(OUT, fname + ".fbx"), use_selection=True, apply_unit_scale=False, global_scale=1.0,
+                             apply_scale_options="FBX_SCALE_NONE", mesh_smooth_type="FACE", add_leaf_bones=False,
                              bake_anim=False, axis_forward="-Z", axis_up="Y")
 
 

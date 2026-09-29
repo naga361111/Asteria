@@ -8,7 +8,7 @@ class UStaticMesh;
 
 /**
  * PCG_GuildShell 외곽 벽·문, 박공지붕, 실내 천장·꾸밈 배치. 건물 칸 수(ShellWidth·ShellHeight)로 점을 만들고,
- * 점마다 Mesh 속성(메시 경로)을 달아 Static Mesh Spawner(By Attribute) 하나로 뿌린다. 조명 자리는 Lights, 문틀·문짝은 DoorParts 핀으로 따로 낸다.
+ * 점마다 Mesh 속성(메시 경로)을 달아 Static Mesh Spawner(By Attribute) 하나로 뿌린다. 조명 자리는 Lights(매단 랜턴)·SconceLights(벽 등), 문틀·문짝은 DoorParts 핀으로 따로 낸다.
  * 외곽선은 월드 원점에서 (가로×300, 세로×300)까지. 용마루는 긴 변을 따라가고, 같으면 X 방향.
  */
 UCLASS(BlueprintType, ClassGroup = (Procedural))
@@ -41,6 +41,10 @@ public:
 	// 외곽 벽(Tavern_C)과 문. 문 중심 = 벽 중심 + 오프셋×300(짝수 칸 벽은 두 칸 경계, 홀수는 칸 한가운데), 모서리 칸에 닿으면 멈춤.
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Walls", meta = (PCG_Overridable))
 	bool bWalls = true;
+
+	// 벽 칸에 창 벽(SM_GuildWall_Window)을 섞는다. 변마다 양 끝에서 센 번호가 홀수인 칸(좌우 대칭), 문 칸 제외.
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Walls", meta = (PCG_Overridable))
+	bool bWallWindows = true;
 
 	// 문 위치(그래프 파라미터 DoorNegY 등). 벽·문 배치와, 벽 기둥·벽 등·깃발이 문을 피하는 데 쓴다.
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Doors", meta = (PCG_Overridable))
@@ -94,6 +98,10 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Meshes")
 	TSoftObjectPtr<UStaticMesh> WallHalfMesh;
+
+	// Tavern_C 줄에 끼우는 창 벽(300×400, 벽과 같은 피벗). 창 구멍 가운데 폭 112.
+	UPROPERTY(EditAnywhere, Category = "Meshes")
+	TSoftObjectPtr<UStaticMesh> WindowWallMesh;
 
 	// 문 위 벽(폭 180) / 문틀 / 문짝 좌·우. 문틀·문짝은 통로를 막지 않게 DoorParts 핀으로 따로 낸다.
 	UPROPERTY(EditAnywhere, Category = "Meshes")
