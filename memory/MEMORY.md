@@ -11,3 +11,4 @@
 - [Slate screenshot on minimized editor crashes](unreal-slate-screenshot-minimized-crash.md) — 에디터 최소화 중 UI 스크린샷 금지(복원 시 크래시), 창 복원·이동은 직접 하지 말고 사용자에게 요청
 - [Editor Python via console](unreal-editor-python-console.md) — 콘솔창에 `py "스크립트"` 입력으로 전체 에디터 Python 실행, 랜드스케이프 생성 폼 설정은 /Engine/Transient.UISettings
 - [Landscape anti-tiling material](landscape-material-antitiling.md) — Design 지형은 MI_Landscape_Village(팩 원본 복사본, 타일 크기·매크로 변화·헥스 타일링), z=0 평지의 격자선은 에디터 그리드(ShowFlag.Grid)
+- [Hearthvale module sizes](hearthvale-module-sizes.md) — 건축 부품 실측: 300 격자, 벽 피벗(+X, 두께 -Y), 층 400+300, 계단 150+150+100
