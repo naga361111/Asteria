@@ -9,7 +9,7 @@ metadata:
 ---
 
 - Blender: `C:/Program Files/Blender Foundation/Blender 5.2/blender.exe`. MCP 연동 없이 `-b --factory-startup --python 스크립트`로 돌린다.
-- 생성 스크립트는 `Tools/Blender/guild_roof_parts.py`이고, FBX를 `Intermediate/GuildRoof/`에 쓴다. 임포트는 `Tools/Blender/import_guild_roof.py`를 에디터를 닫은 상태에서 명령줄로 실행한다. 결과는 `/Game/Map/Building/Meshes/Roof/SM_GuildRoof_*`.
+- 생성 스크립트는 `Tools/Blender/guild_roof_parts.py`이고, FBX를 `Intermediate/GuildRoof/`에 쓴다. 임포트는 `Tools/Blender/import_guild_parts.py`를 에디터를 닫은 상태에서 명령줄로 실행한다. 결과는 `/Game/Map/Building/Meshes/Roof/SM_GuildRoof_*`.
 - 좌표: 언리얼 (x, y, z) cm = Blender (x, -y, z) m. 충돌은 `UCX_<메시이름>_NN` 오브젝트로 넣는다.
 - 임포트: UE 5.8 기본 FBX 임포터(Interchange)는 AssetImportTask로 가져올 때 UCX를 무시해서 충돌이 비었다. 그래서 import 스크립트에서 `Interchange.FeatureFlags.Import.FBX false`로 기존 FBX 임포터를 쓴다. 기존 임포터는 파일의 단위 정보를 보고 m→cm로 바꾸므로, Blender 내보내기는 `apply_unit_scale=False, global_scale=1.0, FBX_SCALE_NONE`로 한다(좌표 m 그대로). 다시 임포트할 때는 옵션(import_uniform_scale 등)이 반영되지 않았다(2026-09-29).
 - Hearthvale UV 밀도: 타일형 나무·돌 재질은 약 260~300cm당 반복 1회. Tavern_C 윗단 세로 판자는 MI_Trim_Wood_B_Rough 트림 시트의 V 0.502~0.996 영역이고, 높이는 143cm다.

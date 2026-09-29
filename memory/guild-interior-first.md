@@ -10,7 +10,7 @@ metadata:
 
 2026-09-29 사용자 지시: "건물 외부는 신경쓰지 말고, 내부 기준으로만 할꺼야." 이전에 외관 비율 때문에 2층 벽(700)을 올렸는데, 사용자는 "층고가 높아져서 너무 웅장한 감"이 있다고 했다. 그래서 2층 벽은 되돌렸다.
 
-현재 구조(Guild Roof C++ 노드, `Source/Asteria/Building/PCGGuildRoofSettings.*`):
+현재 구조(Guild Shell C++ 노드, `Source/Asteria/Building/GuildShell*.cpp`):
 - 벽 400
 - 경사 천장은 지붕 밑면 시작(444)에서 300까지만, 가운데는 평천장(744)
 - 트러스(가로보 430, 두 기둥, 이음보)
