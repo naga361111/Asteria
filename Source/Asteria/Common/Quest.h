@@ -48,6 +48,9 @@ enum class EQuestAssignmentState : uint8
 	Received,
 	// 수행이 끝났다. 창구 정산이 남았다 — 다음 행위자는 플레이어.
 	Cleared,
+	// 수행이 실패로 끝났다. UQuestService::FailQuestAssignment()가 Received에서 전이한다.
+	// BTTask_DeleteQuest가 Assigned~SettleConfirmed 숫자 범위로 훑으므로 그 안(Cleared 바로 다음)에 둔다.
+	Failed,
 	// 카운터의 보상 대기 제출함에 올라갔다 - 다음 행위자는 플레이어.
 	SubmitForSettled,
 	// 플레이어가 정산 컨펌 신호를 보냈고 NPC의 창구 수령을 기다림 — 다음 행위자는 NPC(수령).
@@ -81,4 +84,9 @@ struct FQuestAssignment
 	// 쓰기는 QuestService의 전이 함수만(서버 권위). 읽기는 복제된 값으로 클라도 동일 판정.
 	UPROPERTY(VisibleAnywhere)
 	EQuestAssignmentState State = EQuestAssignmentState::Assigned;
+
+	// 수행이 실패로 끝났는지. State는 Failed 뒤 SubmitForSettled·SettleConfirmed로 넘어가 실패 사실이 사라지므로
+	// 정산 시점까지 남길 근거로 따로 둔다. 쓰기는 UQuestService::FailQuestAssignment()만.
+	UPROPERTY(VisibleAnywhere)
+	bool bQuestFailed = false;
 };

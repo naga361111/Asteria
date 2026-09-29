@@ -65,6 +65,22 @@ namespace
 		}
 		return static_cast<ERank>(PickedRnk);
 	}
+
+	// 동급 퀘스트의 실패 확률.
+	constexpr float BaseFailChance = 0.1f;
+	// 한 단계 위 퀘스트에서 BaseFailChance에 더하는 실패 확률.
+	constexpr float UpperFailChance = 0.3f;
+	// Npc 등급에서 한 단계 내려갈 때마다 실패 확률에 곱하는 비율.
+	constexpr float LowerFailFalloff = 0.5f;
+
+	// Npc 등급 기준 실패 확률: 동급·아래는 단계마다 LowerFailFalloff 배, 위는 BaseFailChance + UpperFailChance.
+	float QuestFailChance(ERank NpcRank, ERank QuestRank)
+	{
+		const int32 Diff = static_cast<int32>(NpcRank) - static_cast<int32>(QuestRank);
+		return Diff < 0
+			? BaseFailChance + UpperFailChance
+			: BaseFailChance * FMath::Pow(LowerFailFalloff, static_cast<float>(Diff));
+	}
 }
 
 // Sets default values for this component's properties
@@ -285,10 +301,47 @@ bool UQuestService::ClearQuestAssignment(int32 AssignmentId)
 		EQuestAssignmentState::Received, EQuestAssignmentState::Cleared) != nullptr;
 }
 
+bool UQuestService::FailQuestAssignment(int32 AssignmentId)
+{
+	FQuestAssignment* Assignment = TransitionQuestAssignment(AssignmentId,
+		EQuestAssignmentState::Received, EQuestAssignmentState::Failed);
+	if (!Assignment)
+	{
+		return false;
+	}
+
+	// 정산 시점까지 실패 사실을 남긴다. 같은 프레임에 쓰므로 전이와 함께 복제된다.
+	Assignment->bQuestFailed = true;
+
+	return true;
+}
+
+bool UQuestService::RollQuestFailure(int32 AssignmentId, ERank NpcRank) const
+{
+	// 입력 검증: Assignment나 퀘스트가 없으면 실패로 판정하지 않고 뒤이은 전이가 거절하도록 둔다.
+	const FQuestAssignment* Assignment = FindQuestAssignment(AssignmentId);
+	if (!Assignment)
+	{
+		return false;
+	}
+	const int32 QuestId = Assignment->QuestId;
+	const FQuest* Quest = QuestPull.FindByPredicate(
+		[QuestId](const FQuest& Q) { return Q.QuestId == QuestId; });
+	if (!Quest)
+	{
+		return false;
+	}
+
+	return FMath::FRand() < QuestFailChance(NpcRank, Quest->QuestRnk);
+}
+
 bool UQuestService::SubmitForSettleQuestAssignment(int32 AssignmentId)
 {
+	// 실패한 퀘스트도 창구에 올린다 — 보상 여부는 수령 시 bQuestFailed로 가른다.
 	return TransitionQuestAssignment(AssignmentId,
-		EQuestAssignmentState::Cleared, EQuestAssignmentState::SubmitForSettled) != nullptr;
+			EQuestAssignmentState::Cleared, EQuestAssignmentState::SubmitForSettled) != nullptr
+		|| TransitionQuestAssignment(AssignmentId,
+			EQuestAssignmentState::Failed, EQuestAssignmentState::SubmitForSettled) != nullptr;
 }
 
 bool UQuestService::SettleQuestAssignment(int32 AssignmentId)
@@ -308,10 +361,17 @@ bool UQuestService::SettleQuestAssignment(int32 AssignmentId)
 
 bool UQuestService::ReceiveSettleQuestAssignment(int32 AssignmentId)
 {
-	if (TransitionQuestAssignment(AssignmentId,
-		EQuestAssignmentState::SettleConfirmed, EQuestAssignmentState::Settled) == nullptr)
+	const FQuestAssignment* Assignment = TransitionQuestAssignment(AssignmentId,
+		EQuestAssignmentState::SettleConfirmed, EQuestAssignmentState::Settled);
+	if (!Assignment)
 	{
 		return false;
+	}
+
+	// 실패한 퀘스트는 지우지 않고 Assignment만 풀어, 남은 시간이 넉넉하면 보드에 되돌린다.
+	if (Assignment->bQuestFailed)
+	{
+		return ReleaseQuestAssignment(AssignmentId);
 	}
 
 	// 수령으로 정산이 끝났으니 Assignment와 퀘스트를 배열에서 지운다.
@@ -371,9 +431,15 @@ bool UQuestService::ReturnQuestAssignment(int32 AssignmentId)
 		return false;
 	}
 
-	// 남은 시간을 판정할 수 없으면 아무것도 지우지 않는다.
+	return ReleaseQuestAssignment(AssignmentId);
+}
+
+bool UQuestService::ReleaseQuestAssignment(int32 AssignmentId)
+{
+	// 남은 시간을 판정할 수 없거나 Assignment가 없으면 아무것도 지우지 않는다.
 	const AAsteriaGameState* GameState = Cast<AAsteriaGameState>(GetOwner());
-	if (!GameState || !GameState->GameClockService)
+	const FQuestAssignment* Assignment = FindQuestAssignment(AssignmentId);
+	if (!GameState || !GameState->GameClockService || !Assignment)
 	{
 		return false;
 	}
@@ -444,11 +510,12 @@ bool UQuestService::IsQuestAssigned(int32 QuestId) const
 		[QuestId](const FQuestAssignment& C) { return C.QuestId == QuestId; });
 }
 
-int32 UQuestService::FindAvailableQuestId(ERank MaxRank) const
+int32 UQuestService::FindAvailableQuestId(ERank NpcRank) const
 {
-	const int32 Max = static_cast<int32>(MaxRank);
+	const int32 Own = static_cast<int32>(NpcRank);
+	const int32 Max = FMath::Min(Own + 1, static_cast<int32>(ERank::S)); // 천장: 자기 등급 +1
 
-	UE_LOG(LogTemp, Warning, TEXT("FindAvailableQuestId ENTER: MaxRank=%d"), Max);
+	UE_LOG(LogTemp, Warning, TEXT("FindAvailableQuestId ENTER: NpcRank=%d Ceiling=%d"), Own, Max);
 
 	// 1패스: 가용 퀘스트가 있는 등급마다 가중치를 딱 한 번 부여한다.
 	// 등급 단위로 확률을 매기는 게 핵심 — 이래야 아래 등급 퀘스트가 아무리 많아도
@@ -466,7 +533,7 @@ int32 UQuestService::FindAvailableQuestId(ERank MaxRank) const
 		}
 		if (TierWeight[Rnk] == 0.f) // 이 등급 첫 발견 시에만
 		{
-			TierWeight[Rnk] = FMath::Pow(RankFalloff, static_cast<float>(Max - Rnk));
+			TierWeight[Rnk] = FMath::Pow(RankFalloff, static_cast<float>(FMath::Abs(Own - Rnk))); // 자기 등급이 정점
 			TotalWeight += TierWeight[Rnk];
 		}
 	}

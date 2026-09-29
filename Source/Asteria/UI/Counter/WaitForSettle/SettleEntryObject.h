@@ -31,4 +31,8 @@ public:
 	// 이 칸이 그리는 Assignment의 상태(SubmitForSettled 또는 SettleConfirmed). 칸 위젯이 버튼 활성·배경색을 가른다.
 	UPROPERTY()
 	EQuestAssignmentState State = EQuestAssignmentState::SubmitForSettled;
+
+	// 이 칸의 Assignment가 실패한 퀘스트인지. 칸 위젯이 기본 배경색을 가른다.
+	UPROPERTY()
+	bool bQuestFailed = false;
 };

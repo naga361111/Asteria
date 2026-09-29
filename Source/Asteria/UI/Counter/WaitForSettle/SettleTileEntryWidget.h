@@ -53,6 +53,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Counter")
 	FLinearColor WaitingReceiveColor = FLinearColor(1.0f, 0.55f, 0.0f, 1.0f);
 
+	// 실패한 퀘스트의 기본(정산 컨펌 대기) 배경색. WBP Class Defaults에서 조정.
+	UPROPERTY(EditDefaultsOnly, Category="Counter")
+	FLinearColor FailedColor = FLinearColor(0.8f, 0.1f, 0.1f, 1.0f);
+
 private:
 	// WBP에 설정된 원래 배경색. 정산 컨펌 대기 색.
 	FLinearColor DefaultBorderColor = FLinearColor::White;

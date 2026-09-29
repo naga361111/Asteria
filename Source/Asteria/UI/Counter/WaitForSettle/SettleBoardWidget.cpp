@@ -93,6 +93,7 @@ void USettleBoardWidget::RefreshSettlements()
 		Entry->AssignmentId = Assignment.AssignmentId;
 		Entry->QuestId = Assignment.QuestId;
 		Entry->State = Assignment.State;
+		Entry->bQuestFailed = Assignment.bQuestFailed;
 		SettlementTileView->AddItem(Entry);
 	}
 }

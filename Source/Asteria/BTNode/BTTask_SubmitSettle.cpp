@@ -32,9 +32,10 @@ EBTNodeResult::Type UBTTask_SubmitSettle::ExecuteTask(UBehaviorTreeComponent& Ow
 	UCounterService* Counter = GS->CounterService;
 	if (Counter == nullptr) return EBTNodeResult::Failed;
 
-	// 내가 올릴 Assignment = 파티에 내 NpcId가 들고 수행을 마친(Cleared) 것.
+	// 내가 올릴 Assignment = 파티에 내 NpcId가 들고 수행을 마친(Cleared) 것, 없으면 실패로 끝난(Failed) 것.
 	// 상태를 안 보면 수행 중인 것·이미 올린 것까지 집는다.
 	const FQuestAssignment* Assignment = Service->FindQuestAssignmentByNpc(Npc->NpcId, EQuestAssignmentState::Cleared);
+	if (Assignment == nullptr) Assignment = Service->FindQuestAssignmentByNpc(Npc->NpcId, EQuestAssignmentState::Failed);
 	if (Assignment == nullptr) return EBTNodeResult::Failed;
 
 	// 포인터가 아니라 id만 쓴다 — 제출로 QuestAssignments가 바뀌면 위 포인터는 무효.

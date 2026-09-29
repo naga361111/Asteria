@@ -7,7 +7,8 @@
 #include "BTTask_DoQuest.generated.h"
 
 /**
- * 수주 확정된(Accepted) 자기 퀘스트를 수행하고 완료로 확정한다(Accepted→Cleared).
+ * 창구에서 회수한(Received) 자기 퀘스트를 수행하고 결과를 확정한다(Received→Cleared 또는 Failed).
+ * 실패 여부는 시작 시 Npc 등급과 퀘스트 등급으로 한 번 굴려 정한다.
  *
  * 수행 내용 자체는 아직 없다 — QuestDuration만큼 대기하는 자리표시자다.
  * 던전 코어가 서면 이 대기만 교체되고, 앞뒤(무엇을 수행하나·완료를 누가 기록하나)는 그대로 남는다.

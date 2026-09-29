@@ -102,7 +102,11 @@ public:
 	// 다음은 창구 정산(Cleared→Settled)이고, 중복 완료는 From 검사에서 막힌다.
 	bool ClearQuestAssignment(int32 AssignmentId);
 
-	// Cleared→SubmitForSettled. NPC가 완수한 퀘스트를 창구의 보상 대기 제출함에 올린다.
+	// Received→Failed. NPC의 수행이 실패로 끝난다. 실행 경로는 던전 수행(BT) → 여기.
+	// 전이가 받아들여지면 bQuestFailed도 함께 세운다(정산 시 보상을 가르는 근거).
+	bool FailQuestAssignment(int32 AssignmentId);
+
+	// Cleared 또는 Failed→SubmitForSettled. NPC가 수행을 마친 퀘스트를 창구의 보상 대기 제출함에 올린다.
 	// 올라가 있음은 이 상태값이 전부다 — 창구가 별도 목록을 들지 않는다(SubmitQuestAssignment와 같은 이유).
 	bool SubmitForSettleQuestAssignment(int32 AssignmentId);
 
@@ -114,6 +118,7 @@ public:
 
 	// SettleConfirmed→Settled. NPC가 창구에서 수령한다. 유일한 terminal 전이다.
 	// 전이 직후 그 Assignment는 QuestAssignments에서, 해당 퀘스트는 QuestPull에서 제거된다.
+	// 단 bQuestFailed면 ReleaseQuestAssignment로 Assignment만 풀고 퀘스트는 남은 시간에 따라 보드에 되돌린다.
 	// 전이가 실패하면(권위 없음/미존재/상태 불일치) 아무것도 지우지 않는다.
 	// 실행 경로는 수령(BT) → CounterService → 여기.
 	bool ReceiveSettleQuestAssignment(int32 AssignmentId);
@@ -136,10 +141,10 @@ public:
 	bool IsQuestAssigned(int32 QuestId) const;
 
 	// 아직 안 집힌 퀘스트의 QuestId 하나. 없으면 INDEX_NONE. (BT의 "무엇을 집을까" 선택용)
-	// MaxRank가 천장 — 자기보다 높은 등급은 안 뽑는다. 등급 단위 가중 추첨이라 동급을 크게 선호하되
-	// 낮은 확률로 아래 등급도 나오고, 등급 내 퀘스트 개수에는 휘둘리지 않는다.
+	// 후보는 NpcRank의 아래 전 등급 + 동급 + 한 단계 위. 등급 단위 가중 추첨이라 동급을 가장 선호하고
+	// 멀어질수록 낮은 확률이며, 등급 내 퀘스트 개수에는 휘둘리지 않는다.
 	// 내부 랜덤 때문에 서버에서만 의미 있는 호출(현재 유일 호출자는 BT).
-	int32 FindAvailableQuestId(ERank MaxRank) const;
+	int32 FindAvailableQuestId(ERank NpcRank) const;
 
 	// AssignmentId → Assignment 본체 역참조. 없으면 nullptr.
 	// 반환 포인터는 QuestAssignments가 바뀌면 무효다(재할당·복제 갱신) — 즉시 읽고 버릴 것.
@@ -150,6 +155,11 @@ public:
 	// 단계를 안 좁히면 엉뚱한 걸 집는다. 반환 포인터 수명 주의는 위와 같다.
 	const FQuestAssignment* FindQuestAssignmentByNpc(int32 NpcId, EQuestAssignmentState State) const;
 
+	// Assignment의 퀘스트 등급과 NpcRank로 실패 여부를 한 번 굴린다. 실패면 true.
+	// Assignment나 퀘스트가 없으면 false — 판정 대신 뒤이은 전이가 거절한다.
+	// 내부 랜덤 때문에 서버에서만 의미 있는 호출(현재 유일 호출자는 BT).
+	bool RollQuestFailure(int32 AssignmentId, ERank NpcRank) const;
+
 protected:
 	// 서버에서 길드 등급 기준으로 퀘스트를 생성한다. 클라는 복제된 QuestPull만 받는다.
 	virtual void BeginPlay() override;
@@ -159,6 +169,11 @@ private:
 	// 전이마다 다른 건 From/To뿐이라 불변조건 검사를 한 벌로 유지한다.
 	// 성공 시 갱신된 원소, 실패 시 nullptr. 반환 포인터는 즉시 쓰고 버릴 것.
 	FQuestAssignment* TransitionQuestAssignment(int32 AssignmentId, EQuestAssignmentState From, EQuestAssignmentState To);
+
+	// Assignment를 QuestAssignments에서 제거하고, 만료까지 MinReturnRemainingMinutes 미만이면 퀘스트도 QuestPull에서 지운다.
+	// 퀘스트가 남으면 살아있는 Assignment가 없으므로 다시 집을 수 있다. 상태 검사는 호출자 책임.
+	// 실패(GameClockService 없음/미존재) 시 아무것도 지우지 않고 false.
+	bool ReleaseQuestAssignment(int32 AssignmentId);
 
 	// --- 묶음 발행·만료: 전부 서버 전용, 복제 안 함 ---
 

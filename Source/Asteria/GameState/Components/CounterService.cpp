@@ -68,6 +68,11 @@ bool UCounterService::ReceiveSettleQuestAssignment(int32 AssignmentId)
 	const FQuestAssignment* Assignment = QuestService->FindQuestAssignment(AssignmentId);
 	if (Assignment == nullptr || Assignment->State != EQuestAssignmentState::SettleConfirmed) return false;
 
+	// 실패한 퀘스트는 수령만 하고 적립하지 않는다 — 지급 근거(명성 표)가 필요 없으니 조회하지 않는다.
+	// 값으로 복사해 둔다 — 수령 뒤 위 포인터는 무효.
+	const bool bQuestFailed = Assignment->bQuestFailed;
+	if (bQuestFailed) return QuestService->ReceiveSettleQuestAssignment(AssignmentId);
+
 	const int32 QuestId = Assignment->QuestId;
 	const FQuest* Quest = QuestService->QuestPull.FindByPredicate(
 		[QuestId](const FQuest& Q) { return Q.QuestId == QuestId; });

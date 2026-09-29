@@ -40,10 +40,11 @@ void USettleTileEntryWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
 	State = Entry->State;
 	ButtonText->SetIsEnabled(State == EQuestAssignmentState::SubmitForSettled);
 
-	// 수령 대기는 별도 색. 재사용 위젯이라 SubmitForSettled도 매번 원래 색으로 되돌린다.
+	// 수령 대기는 별도 색. 그 외 기본 상태는 실패 퀘스트면 FailedColor, 아니면 원래 색.
+	// 재사용 위젯이라 매 바인딩마다 다시 칠한다.
 	StateBorder->SetBrushColor(State == EQuestAssignmentState::SettleConfirmed
 		? WaitingReceiveColor
-		: DefaultBorderColor);
+		: (Entry->bQuestFailed ? FailedColor : DefaultBorderColor));
 }
 
 void USettleTileEntryWidget::HandleSettleClicked()

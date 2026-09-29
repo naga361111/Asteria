@@ -15,6 +15,8 @@ struct FBTDoQuestMemory
 	TWeakObjectPtr<UQuestService> QuestService;
 	int32 AssignmentId = INDEX_NONE;
 	float RemainingTime = 0.f;
+	// 시작 시 한 번 굴린 실패 판정. 끝날 때 어느 전이를 요청할지 정한다.
+	bool bFailed = false;
 };
 
 UBTTask_DoQuest::UBTTask_DoQuest()
@@ -45,8 +47,9 @@ EBTNodeResult::Type UBTTask_DoQuest::ExecuteTask(UBehaviorTreeComponent& OwnerCo
 	// 포인터가 아니라 id만 들고 간다 — QuestAssignments가 바뀌면 위 포인터는 그 즉시 무효.
 	Mem->AssignmentId = Assignment->AssignmentId;
 	Mem->RemainingTime = QuestDuration;
+	Mem->bFailed = Service->RollQuestFailure(Assignment->AssignmentId, Npc->NpcRnk);
 
-	UE_LOG(LogTemp, Warning, TEXT("Do Quest Start. Assignment:%d"), Mem->AssignmentId)
+	UE_LOG(LogTemp, Warning, TEXT("Do Quest Start. Assignment:%d Failed:%d"), Mem->AssignmentId, Mem->bFailed)
 	return EBTNodeResult::InProgress;
 }
 
@@ -58,12 +61,18 @@ void UBTTask_DoQuest::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMem
 	if (Mem->RemainingTime > 0.f) return;
 
 	// 완료의 검증·기록은 소유자(QuestService)가 서버 권위로 한다 — 여기서 State를 직접 쓰지 않는다.
+	// 퀘스트 실패도 전이가 받아들여지면 태스크는 Succeeded — 다음 단계로 넘어간다.
 	// 그 사이 Assignment가 사라졌거나(NPC 소멸·포기) 상태가 어긋났으면 전이가 거절되고 태스크도 실패한다.
 	UQuestService* Service = Mem->QuestService.Get();
-	const bool bCleared = Service != nullptr && Service->ClearQuestAssignment(Mem->AssignmentId);
+	bool bAccepted = false;
+	if (Service != nullptr)
+	{
+		bAccepted = Mem->bFailed ? Service->FailQuestAssignment(Mem->AssignmentId) : Service->ClearQuestAssignment(Mem->AssignmentId);
+	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Do Quest Finished. Assignment:%d Cleared:%d"), Mem->AssignmentId, bCleared)
-	FinishLatentTask(OwnerComp, bCleared ? EBTNodeResult::Succeeded : EBTNodeResult::Failed);
+	UE_LOG(LogTemp, Warning, TEXT("Do Quest Finished. Assignment:%d Result:%s Accepted:%d"),
+		Mem->AssignmentId, Mem->bFailed ? TEXT("Fail") : TEXT("Success"), bAccepted)
+	FinishLatentTask(OwnerComp, bAccepted ? EBTNodeResult::Succeeded : EBTNodeResult::Failed);
 }
 
 uint16 UBTTask_DoQuest::GetInstanceMemorySize() const

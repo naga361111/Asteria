@@ -32,7 +32,7 @@ public:
 	// 권위·실재·상태 검증은 전부 QuestService가 한다 — 여기서 또 하면 검증이 두 벌이 된다.
 	bool SubmitQuestAssignment(int32 AssignmentId);
 
-	// NPC가 완수한 퀘스트를 창구의 보상 대기 제출함에 올린다(Cleared→SubmitForSettled).
+	// NPC가 수행을 마친 퀘스트를 창구의 보상 대기 제출함에 올린다(Cleared 또는 Failed→SubmitForSettled).
 	// 수주 제출과 같은 문(창구)을 쓴다 — 검증은 QuestService가 한 벌로 한다.
 	bool SubmitForSettleQuestAssignment(int32 AssignmentId);
 
@@ -50,6 +50,7 @@ public:
 
 	// NPC가 창구에서 정산을 수령한다(SettleConfirmed→Settled). 수수료는 길드 자금에, 퀘스트 등급의 명성은 길드 명성에 적립한다.
 	// 지급은 수령 순간 서버에서. 수령 후엔 Assignment·퀘스트가 제거되므로 지급 근거는 수령 전에 모두 확보한다.
+	// 실패한 퀘스트(bQuestFailed)는 수령만 하고 아무것도 적립하지 않는다.
 	bool ReceiveSettleQuestAssignment(int32 AssignmentId);
 
 	// 제출 여부는 Assignment의 State에서 파생한다.
