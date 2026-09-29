@@ -7,7 +7,8 @@
 #include "GuildShellService.generated.h"
 
 /**
- * 길드 건물 외곽 크기(칸 수)를 소유한다. 쓰기는 서버 권위, 클라는 복제된 값을 받아 각자 외곽선과 PCG를 다시 만든다.
+ * 길드 건물 외곽 크기(칸 수)를 소유한다. 쓰기는 서버 권위, 클라는 복제된 값을 받아 각자 PCG 그래프 파라미터를 바꿔 다시 만든다.
+ * 레벨에 저장된 초기 크기는 GuildShellVolume 디테일 패널의 그래프 파라미터(ShellWidth·ShellHeight)가 정한다.
  */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ASTERIA_API UGuildShellService : public UActorComponent
@@ -16,6 +17,9 @@ class ASTERIA_API UGuildShellService : public UActorComponent
 
 public:
 	UGuildShellService();
+
+	// 서버에서 레벨의 PCG 파라미터(디테일 패널 값)를 읽어 초기 칸 수로 삼는다. 클라는 복제로 받는다.
+	virtual void BeginPlay() override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -31,10 +35,13 @@ public:
 	UFUNCTION()
 	void OnRep_ShellSize();
 
-	// 외곽 칸 수를 바꾸고 외곽선·PCG를 다시 만든다. 실패(권위 없음/1~32 범위 밖) 시 false.
+	// 외곽 칸 수를 바꾸고 PCG를 다시 만든다. 실패(권위 없음/1~32 범위 밖) 시 false.
 	bool SetShellSize(int32 Width, int32 Height);
 
 private:
-	// 태그 GuildShell 액터의 스플라인을 현재 칸 수의 닫힌 사각형으로 바꾸고, 태그 GuildShellVolume 액터의 PCG를 강제 재생성한다.
+	// 태그 GuildShellVolume 액터의 PCG 컴포넌트. 없으면 null.
+	class UPCGComponent* FindShellPCG() const;
+
+	// PCG 그래프 파라미터 ShellWidth·ShellHeight를 현재 칸 수로 바꾸고 PCG를 강제 재생성한다.
 	void ApplyShellSize();
 };
