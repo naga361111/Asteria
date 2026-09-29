@@ -29,6 +29,9 @@ namespace
 	// 발행·만료를 확인하는 실제 시간 주기(초).
 	constexpr float QuestClockIntervalSeconds = 1.f;
 
+	// 반환 시 퀘스트를 보드에 되돌릴 최소 남은 시간(게임 분). 이보다 적게 남았으면 퀘스트를 지운다.
+	constexpr int32 MinReturnRemainingMinutes = 5;
+
 	// 길드 등급 기준 가중 추첨: 동급 1, 아래는 단계마다 LowerRankFalloff 배, 위 한 단계만 UpperRankWeight.
 	ERank RollQuestRank(ERank GuildRank)
 	{
@@ -305,17 +308,33 @@ bool UQuestService::SettleQuestAssignment(int32 AssignmentId)
 
 bool UQuestService::ReceiveSettleQuestAssignment(int32 AssignmentId)
 {
-	const FQuestAssignment* Settled = TransitionQuestAssignment(AssignmentId,
-		EQuestAssignmentState::SettleConfirmed, EQuestAssignmentState::Settled);
-	if (Settled == nullptr)
+	if (TransitionQuestAssignment(AssignmentId,
+		EQuestAssignmentState::SettleConfirmed, EQuestAssignmentState::Settled) == nullptr)
 	{
 		return false;
 	}
-	// 반환 포인터는 배열이 바뀌면 무효 — 제거에 쓸 QuestId를 먼저 복사해 둔다.
-	const int32 QuestId = Settled->QuestId;
 
 	// 수령으로 정산이 끝났으니 Assignment와 퀘스트를 배열에서 지운다.
 	// 지급 근거는 호출자(CounterService)가 수령 전에 미리 읽어 둔다.
+	return DeleteQuestAssignment(AssignmentId);
+}
+
+bool UQuestService::DeleteQuestAssignment(int32 AssignmentId)
+{
+	// 소유·복제 방향 불변조건: 상태 변경은 호스트만.
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return false;
+	}
+
+	const FQuestAssignment* Assignment = FindQuestAssignment(AssignmentId);
+	if (!Assignment)
+	{
+		return false;
+	}
+	// 반환 포인터는 배열이 바뀌면 무효 — 제거 전에 QuestId를 복사해 둔다.
+	const int32 QuestId = Assignment->QuestId;
+
 	if (QuestAssignments.RemoveAll(
 		[AssignmentId](const FQuestAssignment& C) { return C.AssignmentId == AssignmentId; }) > 0)
 	{
@@ -330,6 +349,52 @@ bool UQuestService::ReceiveSettleQuestAssignment(int32 AssignmentId)
 	// 서버는 OnRep이 자동 호출되지 않으므로 직접 통지.
 	OnQuestAssignmentsChanged.Broadcast();
 	OnQuestPullChanged.Broadcast();
+
+	return true;
+}
+
+bool UQuestService::ReturnQuestAssignment(int32 AssignmentId)
+{
+	// 소유·복제 방향 불변조건: 상태 변경은 호스트만.
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return false;
+	}
+
+	// 수주 단계만 반환 가능 — Received 이후는 수행·정산 중이라 보드로 되돌리면 안 된다.
+	const FQuestAssignment* Assignment = FindQuestAssignment(AssignmentId);
+	if (!Assignment
+		|| (Assignment->State != EQuestAssignmentState::Assigned
+			&& Assignment->State != EQuestAssignmentState::Submitted
+			&& Assignment->State != EQuestAssignmentState::Accepted))
+	{
+		return false;
+	}
+
+	// 남은 시간을 판정할 수 없으면 아무것도 지우지 않는다.
+	const AAsteriaGameState* GameState = Cast<AAsteriaGameState>(GetOwner());
+	if (!GameState || !GameState->GameClockService)
+	{
+		return false;
+	}
+	const int32 Now = GameState->GameClockService->GetGameMinutes();
+
+	// 반환 포인터는 배열이 바뀌면 무효 — 제거 전에 QuestId를 복사해 둔다.
+	const int32 QuestId = Assignment->QuestId;
+
+	QuestAssignments.RemoveAll(
+		[AssignmentId](const FQuestAssignment& C) { return C.AssignmentId == AssignmentId; });
+
+	// 만료가 코앞이면 보드에 되돌려 봐야 곧 사라지니 퀘스트째 지운다.
+	const bool bQuestRemoved = QuestPull.RemoveAll([QuestId, Now](const FQuest& Q)
+		{ return Q.QuestId == QuestId && Q.ExpireGameMinute - Now < MinReturnRemainingMinutes; }) > 0;
+
+	// 서버는 OnRep이 자동 호출되지 않으므로 직접 통지.
+	OnQuestAssignmentsChanged.Broadcast();
+	if (bQuestRemoved)
+	{
+		OnQuestPullChanged.Broadcast();
+	}
 
 	return true;
 }

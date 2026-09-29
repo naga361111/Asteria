@@ -9,6 +9,7 @@
 #include "NPC/AsteriaNpc.h"
 #include "GameState/AsteriaGameState.h"
 #include "GameState/Components/QuestService.h"
+#include "GameState/Components/GameClockService.h"
 
 UBTTask_WaitForConfirmQuest::UBTTask_WaitForConfirmQuest()
 {
@@ -17,7 +18,7 @@ UBTTask_WaitForConfirmQuest::UBTTask_WaitForConfirmQuest()
 	// 실행 중 상태(이동·회전·구독)를 멤버에 저장하므로 트리 컴포넌트마다 별도 인스턴스가 필요하다.
 	bCreateNodeInstance = true;
 
-	// 회전 페이즈에서만 틱을 사용한다.
+	// 대기 마감 확인과 회전 페이즈에 틱을 사용한다.
 	bNotifyTick = true;
 
 	// 성공/실패/Abort 공통 정리를 OnTaskFinished에서 한다.
@@ -47,6 +48,12 @@ EBTNodeResult::Type UBTTask_WaitForConfirmQuest::ExecuteTask(UBehaviorTreeCompon
 			? EBTNodeResult::Succeeded
 			: EBTNodeResult::Failed;
 	}
+
+	// 제출 직후 실행되므로 지금부터 마감을 잡는다 — 지점 없음·이동 실패로 제자리 대기해도 적용.
+	UGameClockService* Clock = GS->GameClockService;
+	if (Clock == nullptr) return EBTNodeResult::Failed;
+	GameClock = Clock;
+	ExpireGameMinute = Clock->GetGameMinutes() + WaitGameMinutes;
 
 	QuestService = Service;
 	// 포인터가 아니라 id만 들고 간다 — QuestAssignments가 바뀌면 위 포인터는 그 즉시 무효.
@@ -151,6 +158,14 @@ void UBTTask_WaitForConfirmQuest::OnMoveCompleted(FAIRequestID RequestID, EPathF
 
 void UBTTask_WaitForConfirmQuest::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
+	// 이동 중이든 도착 후든 마감이 지나면 실패. 정리는 OnTaskFinished가 한다.
+	if (GameClock.IsValid() && GameClock->GetGameMinutes() >= ExpireGameMinute)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Confirm wait timed out. Assignment:%d"), WaitingAssignmentId)
+		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
+		return;
+	}
+
 	if (!bFacing)
 	{
 		return;
@@ -180,6 +195,8 @@ void UBTTask_WaitForConfirmQuest::OnTaskFinished(UBehaviorTreeComponent& OwnerCo
 	AcceptedHandle.Reset();
 	QuestService.Reset();
 	WaitingAssignmentId = INDEX_NONE;
+	GameClock.Reset();
+	ExpireGameMinute = 0;
 
 	// 이 태스크의 이동이 진행 중이면 멈추고 콜백을 뗀다.
 	if (MoveRequestID.IsValid())

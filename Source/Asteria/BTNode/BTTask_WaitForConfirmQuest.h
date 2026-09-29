@@ -9,10 +9,12 @@
 #include "BTTask_WaitForConfirmQuest.generated.h"
 
 class UQuestService;
+class UGameClockService;
 
 /**
  * 제출된(Submitted) 퀘스트의 확정을 대기 지점(기본 Lounge)으로 걸어가며 기다린다.
  * 이동 중 컨펌되면 즉시 Succeeded, 도착(또는 이동 실패) 후에는 제자리에서 컨펌까지 대기.
+ * 제출 시점부터 WaitGameMinutes(게임 분)가 지나도 컨펌되지 않으면 Failed.
  * 제출은 앞선 Submit Quest가 맡는다.
  * 이동·회전은 MoveToApproachPoint와 같은 방식으로 자체 구현한다.
  */
@@ -49,6 +51,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Rotation", meta = (ClampMin = "0.0"))
 	float AngleTolerance = 1.0f;
 
+	// 컨펌 대기 제한 시간(게임 분). 제출 시점부터 세며, 넘기면 Failed.
+	UPROPERTY(EditAnywhere, Category = "Wait", meta = (ClampMin = "1"))
+	int32 WaitGameMinutes = 30;
+
 private:
 	// 이동 완료 델리게이트를 떼고 이동 요청 ID를 초기화한다.
 	void UnbindMoveCompleted();
@@ -77,4 +83,10 @@ private:
 
 	// 기다리는 Assignment id.
 	int32 WaitingAssignmentId = INDEX_NONE;
+
+	// 마감 확인용 게임 시계.
+	TWeakObjectPtr<UGameClockService> GameClock;
+
+	// 이번 실행의 대기 마감 게임 분.
+	int32 ExpireGameMinute = 0;
 };

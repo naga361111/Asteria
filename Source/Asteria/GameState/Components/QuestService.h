@@ -118,6 +118,17 @@ public:
 	// 실행 경로는 수령(BT) → CounterService → 여기.
 	bool ReceiveSettleQuestAssignment(int32 AssignmentId);
 
+	// 수주 단계(Assigned·Submitted·Accepted)의 Assignment를 QuestAssignments에서 제거한다. NPC가 퀘스트를 내려놓고 떠날 때.
+	// 집힘 여부는 살아있는 Assignment로 파생되므로 제거만으로 퀘스트가 다시 잡을 수 있는 상태가 된다.
+	// 만료까지 MinReturnRemainingMinutes 미만이면 퀘스트도 QuestPull에서 지운다.
+	// 실패(권위 없음/미존재/상태 불일치/GameClockService 없음) 시 아무것도 지우지 않고 false.
+	bool ReturnQuestAssignment(int32 AssignmentId);
+
+	// Assignment를 QuestAssignments에서, 그 퀘스트를 QuestPull에서 상태·남은 시간과 관계없이 제거한다.
+	// 정산 수령(ReceiveSettleQuestAssignment)과 NPC가 떠날 때(DeleteQuest BT)가 이 하나로 지운다.
+	// 실패(권위 없음/미존재) 시 아무것도 지우지 않고 false.
+	bool DeleteQuestAssignment(int32 AssignmentId);
+
 	// --- 파생 질의: 상태에서 읽어낼 뿐 따로 저장하지 않는다 ---
 
 	// 가용성 파생의 단일 원천. 클라에서도 복제된 QuestAssignments를 읽어 동일 판정.
