@@ -24,12 +24,13 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// 외곽 가로 칸 수(한 칸 300). 쓰기는 서버 권위(SetShellSize).
+	// 기본값 0 = 아직 정해지지 않음. 기본값과 같은 값은 복제되지 않으므로, 실제 크기(1 이상)는 항상 클라로 복제돼 OnRep이 불린다.
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_ShellSize, Category="GuildShell")
-	int32 ShellWidth = 8;
+	int32 ShellWidth = 0;
 
-	// 외곽 세로 칸 수(한 칸 300). 쓰기는 서버 권위(SetShellSize).
+	// 외곽 세로 칸 수(한 칸 300). 쓰기는 서버 권위(SetShellSize). 기본값 0의 이유는 ShellWidth와 같다.
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_ShellSize, Category="GuildShell")
-	int32 ShellHeight = 8;
+	int32 ShellHeight = 0;
 
 	// 가로·세로가 같은 OnRep을 공유한다. 둘 다 바뀌면 두 번 불리지만 ApplyShellSize가 두 번째를 건너뛴다.
 	UFUNCTION()
