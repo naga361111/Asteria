@@ -31,7 +31,7 @@ public:
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_ShellSize, Category="GuildShell")
 	int32 ShellHeight = 8;
 
-	// 가로·세로는 함께 바뀌므로 같은 OnRep을 공유한다.
+	// 가로·세로가 같은 OnRep을 공유한다. 둘 다 바뀌면 두 번 불리지만 ApplyShellSize가 두 번째를 건너뛴다.
 	UFUNCTION()
 	void OnRep_ShellSize();
 
@@ -42,6 +42,6 @@ private:
 	// 태그 GuildShellVolume 액터의 PCG 컴포넌트. 없으면 null.
 	class UPCGComponent* FindShellPCG() const;
 
-	// PCG 그래프 파라미터 ShellWidth·ShellHeight를 현재 칸 수로 바꾸고 PCG를 강제 재생성한다.
+	// PCG 그래프 파라미터 ShellWidth·ShellHeight를 현재 칸 수로 바꾸고 PCG를 강제 재생성한다. 이미 같은 크기면 건너뛴다.
 	void ApplyShellSize();
 };

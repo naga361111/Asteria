@@ -3,6 +3,7 @@
 
 #include "GuildShellService.h"
 
+#include "Building/PCGGuildShellSettings.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "PCGComponent.h"
@@ -10,8 +11,7 @@
 
 namespace
 {
-	// GuildShellVolume 범위(0~9600)와 맞춘 상한. PCG_GuildShell의 Shell_CellMax와 같은 값.
-	constexpr int32 MaxShellCells = 32;
+	constexpr int32 MaxShellCells = UPCGGuildShellSettings::MaxCells;
 
 	// PCG_GuildShell 그래프 파라미터 이름.
 	const FName ShellWidthParam(TEXT("ShellWidth"));
@@ -96,6 +96,17 @@ void UGuildShellService::ApplyShellSize()
 	if (!Graph)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("GuildShellService: PCG component on GuildShellVolume not found. Resize skipped."));
+		return;
+	}
+
+	// 이미 이 크기로 지어졌거나 짓는 중이면 건너뛴다. 클라 접속 시 레벨에 저장된 건물과 같을 때,
+	// 그리고 OnRep이 가로·세로 값마다 한 번씩(두 번) 불릴 때 다시 짓지 않게 한다.
+	const TValueOrError<int32, EPropertyBagResult> CurrentWidth = Graph->GetGraphParameter<int32>(ShellWidthParam);
+	const TValueOrError<int32, EPropertyBagResult> CurrentHeight = Graph->GetGraphParameter<int32>(ShellHeightParam);
+	if ((PCG->bGenerated || PCG->IsGenerating())
+		&& CurrentWidth.HasValue() && CurrentWidth.GetValue() == ShellWidth
+		&& CurrentHeight.HasValue() && CurrentHeight.GetValue() == ShellHeight)
+	{
 		return;
 	}
 
