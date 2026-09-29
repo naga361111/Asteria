@@ -85,6 +85,45 @@ bool UGuildService::AddGuildReputation(int32 Amount)
 	return true;
 }
 
+bool UGuildService::LoseQuestReputation(ERank QuestRank)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority() || !ReputationData)
+	{
+		return false;
+	}
+
+	const int32* Reputation = ReputationData->ReputationByQuestRank.Find(QuestRank);
+	if (!Reputation)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GuildService: no reputation for quest rank %d. Loss skipped."), static_cast<int32>(QuestRank));
+		return false;
+	}
+
+	GuildReputation = FMath::Max(0, GuildReputation - *Reputation);
+	UE_LOG(LogTemp, Warning, TEXT("GuildService: reputation -%d (total %d)"), *Reputation, GuildReputation);
+
+	while (GuildRank > ERank::F)
+	{
+		const int32* Required = ReputationData->ReputationToReachRank.Find(GuildRank);
+		if (!Required)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("GuildService: no reputation requirement for rank %d. Rank down skipped."), static_cast<int32>(GuildRank));
+			break;
+		}
+		if (GuildReputation >= *Required)
+		{
+			break;
+		}
+		GuildRank = static_cast<ERank>(static_cast<uint8>(GuildRank) - 1);
+		UE_LOG(LogTemp, Warning, TEXT("GuildService: rank down to %s (reputation %d / required %d)"),
+			*StaticEnum<ERank>()->GetDisplayNameTextByValue(static_cast<int64>(GuildRank)).ToString(), GuildReputation, *Required);
+	}
+
+	// 서버(호스트)에선 OnRep이 불리지 않으므로 직접 통지한다.
+	OnGuildReputationChanged.Broadcast();
+	return true;
+}
+
 float UGuildService::GetReputationProgress() const
 {
 	if (GuildRank >= ERank::S)
