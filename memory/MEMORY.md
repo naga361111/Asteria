@@ -9,3 +9,4 @@
 - [Visible meshes assets only](visible-meshes-assets-only.md) — 보이는 곳엔 엔진 기본 도형 금지, 에셋만. 외관(밖·위)도 항상 확인
 - [PCG MCP regenerate cache](pcg-mcp-regenerate-cache.md) — 노드 설정 변경은 실행만으론 반영 안 됨, MCP는 엔진 PCG 노드만 추가 가능(C++ 노드는 명령줄 파이썬), 강제 종료 시 복구 모달, Git Bash /Game 경로 변환
 - [PCG Filter By Index crash](pcg-filter-by-index-empty-crash.md) — 빈 데이터/음수 인덱스로 에디터 크래시, Merge Points+Branch로 막고 실행 전 저장
+- [EDIT COPY via Python crashes](unreal-edit-copy-python-crash.md) — execute_console_command(None,"EDIT COPY") 에디터 크래시, 속성 비교는 직접 읽기로

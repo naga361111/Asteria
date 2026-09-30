@@ -39,19 +39,19 @@ void AAsteriaPlayer::Server_SettleQuestAssignment_Implementation(int32 Assignmen
 }
 
 #if WITH_EDITOR
-void AAsteriaPlayer::ShellSize(int32 Width, int32 Height)
+void AAsteriaPlayer::ShellSize(int32 HalfWidth, int32 HalfHeight)
 {
-	Server_SetShellSize(Width, Height);
+	Server_SetShellSize(HalfWidth, HalfHeight);
 }
 
-void AAsteriaPlayer::Server_SetShellSize_Implementation(int32 Width, int32 Height)
+void AAsteriaPlayer::Server_SetShellSize_Implementation(int32 HalfWidth, int32 HalfHeight)
 {
 	AAsteriaGameState* GameState = GetWorld()->GetGameState<AAsteriaGameState>();
 	UGuildShellService* GuildShellService = GameState ? GameState->GuildShellService : nullptr;
 	if (GuildShellService == nullptr) return;
 
 	// 전달만 한다. 권위·범위 검증은 소유자(GuildShellService)가 한다.
-	GuildShellService->SetShellSize(Width, Height);
+	GuildShellService->SetShellSize(HalfWidth, HalfHeight);
 }
 #endif
 

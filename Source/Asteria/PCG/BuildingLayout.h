@@ -22,8 +22,8 @@ struct FBuildingDoor
 namespace BuildingLayout
 {
 	constexpr double Cell = 300.0;
-	// 칸 수 상한. 볼륨 범위(0~9600)에 맞춘 값.
-	constexpr int32 MaxCells = 32;
+	// 가운데 칸을 뺀 한쪽 칸 수 상한. 칸 수 31(9300)이 볼륨 범위(0~9600) 안에 들어가는 값.
+	constexpr int32 MaxHalfCells = 15;
 	// 모서리 기둥을 벽 두께(40) 가운데에 놓는 외곽선 바깥 거리.
 	constexpr double CornerInset = 20.0;
 
@@ -35,23 +35,21 @@ namespace BuildingLayout
 		// 벽(300×300, 피벗 아래·왼쪽, +X로 뻗고 두께 -Y) / 창 벽(-Y면이 돌, 벽과 같은 yaw로 놓아 돌이 바깥을 봄)
 		inline const FSoftObjectPath Wall(TEXT("/Game/Hearthvale/Meshes/Walls/SM_Wall_Tavern_D.SM_Wall_Tavern_D"));
 		inline const FSoftObjectPath WindowWall(TEXT("/Game/Hearthvale/Meshes/Walls/SM_Wall_Tavern_D_Window.SM_Wall_Tavern_D_Window"));
-		// 문틀 포함 한 칸 문 / 짝수 칸 벽 가운데 문 양옆 반쪽 벽(150폭)
+		// 문틀 포함 한 칸 문
 		inline const FSoftObjectPath Entrance(TEXT("/Game/Hearthvale/Meshes/Walls/SM_Wall_Tavern_D_Entrance_300.SM_Wall_Tavern_D_Entrance_300"));
-		inline const FSoftObjectPath HalfLeft(TEXT("/Game/Hearthvale/Meshes/Walls/SM_Wall_Tavern_D_Half_lt.SM_Wall_Tavern_D_Half_lt"));
-		inline const FSoftObjectPath HalfRight(TEXT("/Game/Hearthvale/Meshes/Walls/SM_Wall_Tavern_D_Half_rt.SM_Wall_Tavern_D_Half_rt"));
 		// 모서리 기둥(40×40×300, 중심 피벗). D 세트에 모서리 부품이 없어 이음새를 가린다.
 		inline const FSoftObjectPath Corner(TEXT("/Game/Hearthvale/Meshes/Walls/SM_Wall_House_A_Column_B.SM_Wall_House_A_Column_B"));
 	}
 
 	/**
-	 * 칸 수와 문 설정으로 건물 배치를 계산한다. PCG와 무관한 순수 계산.
-	 * 외곽선은 건물 로컬 원점에서 (가로×300, 세로×300)까지.
+	 * 한쪽 칸 수와 문 설정으로 건물 배치를 계산한다. PCG와 무관한 순수 계산.
+	 * 칸 수는 가운데 칸 + 양쪽 = 2N+1로 항상 홀수. 외곽선은 건물 로컬 원점에서 (가로 칸 수×300, 세로 칸 수×300)까지.
 	 */
 	class FBuilder
 	{
 	public:
-		// Doors: 월드 변 순서 NegY, PosX, PosY, NegX.
-		FBuilder(int32 InWidth, int32 InHeight, const FBuildingDoor (&Doors)[4]);
+		// HalfWidth·HalfHeight: 가운데 칸을 뺀 한쪽 칸 수. Doors: 월드 변 순서 NegY, PosX, PosY, NegX.
+		FBuilder(int32 HalfWidth, int32 HalfHeight, const FBuildingDoor (&Doors)[4]);
 
 		// 점마다 트랜스폼과 메시 경로. 건물 로컬 좌표.
 		TArray<FTransform> Transforms;
@@ -66,11 +64,12 @@ namespace BuildingLayout
 			FVector2D Dir;
 			double Yaw = 0.0;
 			int32 Cells = 0;
-			FIntPoint DoorCells = FIntPoint(-1, -1); // 문이 차지하는 첫·끝 칸, 문 없으면 -1
+			int32 DoorCell = -1; // 문 칸 번호, 문 없으면 -1
 
 			FVector2D Inward() const { return FVector2D(-Dir.Y, Dir.X); }
 		};
 
+		// 칸 수(2N+1)
 		int32 Width;
 		int32 Height;
 		FWall Walls[4];

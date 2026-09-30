@@ -11,11 +11,11 @@
 
 namespace
 {
-	constexpr int32 MaxShellCells = BuildingLayout::MaxCells;
+	constexpr int32 MaxShellHalfCells = BuildingLayout::MaxHalfCells;
 
 	// PCG_Building 그래프 파라미터 이름.
-	const FName ShellWidthParam(TEXT("Width"));
-	const FName ShellHeightParam(TEXT("Height"));
+	const FName ShellHalfWidthParam(TEXT("HalfWidth"));
+	const FName ShellHalfHeightParam(TEXT("HalfHeight"));
 }
 
 UGuildShellService::UGuildShellService()
@@ -28,8 +28,8 @@ void UGuildShellService::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(UGuildShellService, ShellWidth);
-	DOREPLIFETIME(UGuildShellService, ShellHeight);
+	DOREPLIFETIME(UGuildShellService, ShellHalfWidth);
+	DOREPLIFETIME(UGuildShellService, ShellHalfHeight);
 }
 
 void UGuildShellService::BeginPlay()
@@ -49,12 +49,12 @@ void UGuildShellService::BeginPlay()
 	}
 
 	// 레벨에 이미 생성돼 있는 크기를 복제 기준으로 삼는다. 여기서 재생성은 하지 않는다.
-	const TValueOrError<int32, EPropertyBagResult> Width = Graph->GetGraphParameter<int32>(ShellWidthParam);
-	const TValueOrError<int32, EPropertyBagResult> Height = Graph->GetGraphParameter<int32>(ShellHeightParam);
-	if (Width.HasValue() && Height.HasValue())
+	const TValueOrError<int32, EPropertyBagResult> HalfWidth = Graph->GetGraphParameter<int32>(ShellHalfWidthParam);
+	const TValueOrError<int32, EPropertyBagResult> HalfHeight = Graph->GetGraphParameter<int32>(ShellHalfHeightParam);
+	if (HalfWidth.HasValue() && HalfHeight.HasValue())
 	{
-		ShellWidth = FMath::Clamp(Width.GetValue(), 1, MaxShellCells);
-		ShellHeight = FMath::Clamp(Height.GetValue(), 1, MaxShellCells);
+		ShellHalfWidth = FMath::Clamp(HalfWidth.GetValue(), 0, MaxShellHalfCells);
+		ShellHalfHeight = FMath::Clamp(HalfHeight.GetValue(), 0, MaxShellHalfCells);
 	}
 }
 
@@ -63,20 +63,20 @@ void UGuildShellService::OnRep_ShellSize()
 	ApplyShellSize();
 }
 
-bool UGuildShellService::SetShellSize(int32 Width, int32 Height)
+bool UGuildShellService::SetShellSize(int32 HalfWidth, int32 HalfHeight)
 {
 	if (!GetOwner() || !GetOwner()->HasAuthority())
 	{
 		return false;
 	}
-	if (Width < 1 || Width > MaxShellCells || Height < 1 || Height > MaxShellCells)
+	if (HalfWidth < 0 || HalfWidth > MaxShellHalfCells || HalfHeight < 0 || HalfHeight > MaxShellHalfCells)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("GuildShellService: size %dx%d out of range (1~%d)."), Width, Height, MaxShellCells);
+		UE_LOG(LogTemp, Warning, TEXT("GuildShellService: half size %dx%d out of range (0~%d)."), HalfWidth, HalfHeight, MaxShellHalfCells);
 		return false;
 	}
 
-	ShellWidth = Width;
-	ShellHeight = Height;
+	ShellHalfWidth = HalfWidth;
+	ShellHalfHeight = HalfHeight;
 	// 서버(호스트)에선 OnRep이 불리지 않으므로 직접 적용한다.
 	ApplyShellSize();
 	return true;
@@ -101,19 +101,19 @@ void UGuildShellService::ApplyShellSize()
 
 	// 이미 이 크기로 지어졌거나 짓는 중이면 건너뛴다. 클라 접속 시 레벨에 저장된 건물과 같을 때,
 	// 그리고 OnRep이 가로·세로 값마다 한 번씩(두 번) 불릴 때 다시 짓지 않게 한다.
-	const TValueOrError<int32, EPropertyBagResult> CurrentWidth = Graph->GetGraphParameter<int32>(ShellWidthParam);
-	const TValueOrError<int32, EPropertyBagResult> CurrentHeight = Graph->GetGraphParameter<int32>(ShellHeightParam);
+	const TValueOrError<int32, EPropertyBagResult> CurrentHalfWidth = Graph->GetGraphParameter<int32>(ShellHalfWidthParam);
+	const TValueOrError<int32, EPropertyBagResult> CurrentHalfHeight = Graph->GetGraphParameter<int32>(ShellHalfHeightParam);
 	if ((PCG->bGenerated || PCG->IsGenerating())
-		&& CurrentWidth.HasValue() && CurrentWidth.GetValue() == ShellWidth
-		&& CurrentHeight.HasValue() && CurrentHeight.GetValue() == ShellHeight)
+		&& CurrentHalfWidth.HasValue() && CurrentHalfWidth.GetValue() == ShellHalfWidth
+		&& CurrentHalfHeight.HasValue() && CurrentHalfHeight.GetValue() == ShellHalfHeight)
 	{
 		return;
 	}
 
-	if (Graph->SetGraphParameter<int32>(ShellWidthParam, ShellWidth) != EPropertyBagResult::Success
-		|| Graph->SetGraphParameter<int32>(ShellHeightParam, ShellHeight) != EPropertyBagResult::Success)
+	if (Graph->SetGraphParameter<int32>(ShellHalfWidthParam, ShellHalfWidth) != EPropertyBagResult::Success
+		|| Graph->SetGraphParameter<int32>(ShellHalfHeightParam, ShellHalfHeight) != EPropertyBagResult::Success)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("GuildShellService: graph has no Width/Height parameter. Resize skipped."));
+		UE_LOG(LogTemp, Warning, TEXT("GuildShellService: graph has no HalfWidth/HalfHeight parameter. Resize skipped."));
 		return;
 	}
 
@@ -121,5 +121,6 @@ void UGuildShellService::ApplyShellSize()
 	PCG->CleanupLocalImmediate(true);
 	PCG->GenerateLocal(true);
 
-	UE_LOG(LogTemp, Warning, TEXT("GuildShellService: shell resized to %dx%d."), ShellWidth, ShellHeight);
+	UE_LOG(LogTemp, Warning, TEXT("GuildShellService: shell resized to half %dx%d (cells %dx%d)."),
+		ShellHalfWidth, ShellHalfHeight, ShellHalfWidth * 2 + 1, ShellHalfHeight * 2 + 1);
 }

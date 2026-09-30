@@ -4,29 +4,14 @@ namespace BuildingLayout
 {
 	namespace
 	{
-		// 문이 차지하는 첫·끝 칸(X, Y). 가운데 + Offset이고 모서리 칸에 닿으면 멈춘다. 문 없으면 -1.
-		// 홀수 칸 벽은 한 칸(1~Cells-2), 짝수 칸 벽은 칸 경계(2~Cells-2) 양옆 두 칸.
-		FIntPoint DoorCells(int32 Cells, const FBuildingDoor& Door)
+		// 문 칸 번호. 가운데 칸 + Offset이고 모서리 칸에 닿으면 멈춘다(1~Cells-2). 3칸 미만 벽이거나 문 없으면 -1.
+		int32 DoorCells(int32 Cells, const FBuildingDoor& Door)
 		{
-			if (!Door.bEnabled)
+			if (!Door.bEnabled || Cells < 3)
 			{
-				return FIntPoint(-1, -1);
+				return -1;
 			}
-			if (Cells % 2 == 0)
-			{
-				if (Cells < 4)
-				{
-					return FIntPoint(-1, -1);
-				}
-				const int32 K = FMath::Clamp(Cells / 2 + Door.Offset, 2, Cells - 2);
-				return FIntPoint(K - 1, K);
-			}
-			if (Cells < 3)
-			{
-				return FIntPoint(-1, -1);
-			}
-			const int32 K = FMath::Clamp(Cells / 2 + Door.Offset, 1, Cells - 2);
-			return FIntPoint(K, K);
+			return FMath::Clamp(Cells / 2 + Door.Offset, 1, Cells - 2);
 		}
 
 		// 양 끝에서 센 번호가 홀수인 칸에 창(좌우 대칭).
@@ -36,9 +21,9 @@ namespace BuildingLayout
 		}
 	}
 
-	FBuilder::FBuilder(int32 InWidth, int32 InHeight, const FBuildingDoor (&Doors)[4])
-		: Width(InWidth)
-		, Height(InHeight)
+	FBuilder::FBuilder(int32 HalfWidth, int32 HalfHeight, const FBuildingDoor (&Doors)[4])
+		: Width(HalfWidth * 2 + 1)
+		, Height(HalfHeight * 2 + 1)
 	{
 		const double Len = Width * Cell;
 		const double Span = Height * Cell;
@@ -51,7 +36,7 @@ namespace BuildingLayout
 			W.Dir = (Corners[(Side + 1) % 4] - Corners[Side]).GetSafeNormal();
 			W.Yaw = Yaws[Side];
 			W.Cells = Side % 2 == 0 ? Width : Height;
-			W.DoorCells = DoorCells(W.Cells, Doors[Side]);
+			W.DoorCell = DoorCells(W.Cells, Doors[Side]);
 		}
 
 		BuildFloor();
@@ -89,31 +74,15 @@ namespace BuildingLayout
 		for (int32 Side = 0; Side < 4; ++Side)
 		{
 			const FWall& W = Walls[Side];
-			const FIntPoint Door = W.DoorCells;
-
 			for (int32 i = 0; i < W.Cells; ++i)
 			{
-				if (i >= Door.X && i <= Door.Y)
+				if (i == W.DoorCell)
 				{
+					AddOnWall(Mesh::Entrance, Side, i * Cell);
 					continue;
 				}
 				AddOnWall(IsWindowCell(W.Cells, i) ? Mesh::WindowWall : Mesh::Wall, Side, i * Cell);
 			}
-			if (Door.X < 0)
-			{
-				continue;
-			}
-
-			const double DoorStart = Door.X * Cell;
-			if (Door.Y == Door.X)
-			{
-				AddOnWall(Mesh::Entrance, Side, DoorStart);
-				continue;
-			}
-			// 두 칸 문: 반쪽 벽(150) + 문(300, 가운데) + 반쪽 벽(150).
-			AddOnWall(Mesh::HalfLeft, Side, DoorStart);
-			AddOnWall(Mesh::Entrance, Side, DoorStart + Cell * 0.5);
-			AddOnWall(Mesh::HalfRight, Side, DoorStart + Cell * 1.5);
 		}
 	}
 

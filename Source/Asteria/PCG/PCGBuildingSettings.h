@@ -23,12 +23,13 @@ public:
 	virtual EPCGSettingsType GetType() const override { return EPCGSettingsType::Spatial; }
 #endif
 
-	// 가로(X)·세로(Y) 칸 수(한 칸 300). 그래프의 Width·Height 파라미터를 받는다. 1~BuildingLayout::MaxCells로 자른다.
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings", meta = (PCG_Overridable, ClampMin = "1"))
-	int32 Width = 8;
+	// 가로(X)·세로(Y) 가운데 칸을 뺀 한쪽 칸 수(한 칸 300, 칸 수 = 2N+1). 그래프의 HalfWidth·HalfHeight 파라미터를 받는다.
+	// 0~BuildingLayout::MaxHalfCells로 자른다. ClampMax는 MaxHalfCells와 같은 값.
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings", meta = (PCG_Overridable, ClampMin = "0", ClampMax = "15"))
+	int32 HalfWidth = 1;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings", meta = (PCG_Overridable, ClampMin = "1"))
-	int32 Height = 8;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Settings", meta = (PCG_Overridable, ClampMin = "0", ClampMax = "15"))
+	int32 HalfHeight = 1;
 
 	// 변마다 문(그래프 파라미터 DoorNegY 등의 bEnabled·Offset). 문 중심 = 벽 중심 + 오프셋×300, 모서리 칸에 닿으면 멈춘다.
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Doors", meta = (PCG_Overridable))

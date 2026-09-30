@@ -85,10 +85,10 @@ bool FPCGBuildingElement::ExecuteInternal(FPCGContext* Context) const
 		MakeBuildingDoor(Settings->bDoorPosY, Settings->DoorPosYOffset),
 		MakeBuildingDoor(Settings->bDoorNegX, Settings->DoorNegXOffset),
 	};
-	// 칸 수는 그래프 파라미터(외부 입력)라 범위를 자른다.
+	// 한쪽 칸 수는 그래프 파라미터(외부 입력)라 범위를 자른다.
 	const BuildingLayout::FBuilder Building(
-		FMath::Clamp(Settings->Width, 1, BuildingLayout::MaxCells),
-		FMath::Clamp(Settings->Height, 1, BuildingLayout::MaxCells),
+		FMath::Clamp(Settings->HalfWidth, 0, BuildingLayout::MaxHalfCells),
+		FMath::Clamp(Settings->HalfHeight, 0, BuildingLayout::MaxHalfCells),
 		Doors);
 
 	const FTransform Origin = GetBuildingOrigin(Context);
