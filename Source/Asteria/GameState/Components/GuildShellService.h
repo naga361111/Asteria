@@ -8,7 +8,7 @@
 
 /**
  * 길드 건물 외곽 크기(칸 수)를 소유한다. 쓰기는 서버 권위, 클라는 복제된 값을 받아 각자 PCG 그래프 파라미터를 바꿔 다시 만든다.
- * 레벨에 저장된 초기 크기는 GuildShellVolume 디테일 패널의 그래프 파라미터(ShellWidth·ShellHeight)가 정한다.
+ * 레벨에 저장된 초기 크기는 GuildShellVolume 디테일 패널의 그래프 파라미터(Width·Height)가 정한다.
  */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ASTERIA_API UGuildShellService : public UActorComponent
@@ -43,6 +43,6 @@ private:
 	// 태그 GuildShellVolume 액터의 PCG 컴포넌트. 없으면 null.
 	class UPCGComponent* FindShellPCG() const;
 
-	// PCG 그래프 파라미터 ShellWidth·ShellHeight를 현재 칸 수로 바꾸고 PCG를 강제 재생성한다. 이미 같은 크기면 건너뛴다.
+	// PCG 그래프 파라미터 Width·Height를 현재 칸 수로 바꾸고 PCG를 강제 재생성한다. 이미 같은 크기면 건너뛴다.
 	void ApplyShellSize();
 };

@@ -3,7 +3,7 @@
 
 #include "GuildShellService.h"
 
-#include "Building/PCGGuildShellSettings.h"
+#include "PCG/BuildingLayout.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "PCGComponent.h"
@@ -11,11 +11,11 @@
 
 namespace
 {
-	constexpr int32 MaxShellCells = UPCGGuildShellSettings::MaxCells;
+	constexpr int32 MaxShellCells = BuildingLayout::MaxCells;
 
-	// PCG_GuildShell 그래프 파라미터 이름.
-	const FName ShellWidthParam(TEXT("ShellWidth"));
-	const FName ShellHeightParam(TEXT("ShellHeight"));
+	// PCG_Building 그래프 파라미터 이름.
+	const FName ShellWidthParam(TEXT("Width"));
+	const FName ShellHeightParam(TEXT("Height"));
 }
 
 UGuildShellService::UGuildShellService()
@@ -113,7 +113,7 @@ void UGuildShellService::ApplyShellSize()
 	if (Graph->SetGraphParameter<int32>(ShellWidthParam, ShellWidth) != EPropertyBagResult::Success
 		|| Graph->SetGraphParameter<int32>(ShellHeightParam, ShellHeight) != EPropertyBagResult::Success)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("GuildShellService: graph has no ShellWidth/ShellHeight parameter. Resize skipped."));
+		UE_LOG(LogTemp, Warning, TEXT("GuildShellService: graph has no Width/Height parameter. Resize skipped."));
 		return;
 	}
 
