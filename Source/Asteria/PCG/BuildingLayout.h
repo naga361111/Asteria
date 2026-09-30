@@ -38,8 +38,8 @@ namespace BuildingLayout
 	// 메시. 배치 코드가 각 메시의 피벗·치수에 맞춰져 있어 메시를 바꾸면 해당 배치 코드도 봐야 한다.
 	namespace Mesh
 	{
-		// 바닥 타일(피벗 모서리, +X·-Y로 뻗음)
-		inline const FSoftObjectPath Floor(TEXT("/Game/Hearthvale/Meshes/Floor/SM_Floor_Tiles_300.SM_Floor_Tiles_300"));
+		// 판자 바닥(300×300, 피벗 모서리, +X·-Y로 뻗음)
+		inline const FSoftObjectPath Floor(TEXT("/Game/Hearthvale/Meshes/Floor/SM_PlanksFloor_A.SM_PlanksFloor_A"));
 		// 벽(300×300, 피벗 아래·왼쪽, +X로 뻗고 두께 -Y) / 창 벽(-Y면이 돌, 벽과 같은 yaw로 놓아 돌이 바깥을 봄)
 		inline const FSoftObjectPath Wall(TEXT("/Game/Hearthvale/Meshes/Walls/SM_Wall_Tavern_D.SM_Wall_Tavern_D"));
 		inline const FSoftObjectPath WindowWall(TEXT("/Game/Hearthvale/Meshes/Walls/SM_Wall_Tavern_D_Window.SM_Wall_Tavern_D_Window"));
