@@ -61,4 +61,9 @@ class FPCGGuildShellElement : public IPCGElement
 {
 protected:
 	virtual bool ExecuteInternal(FPCGContext* Context) const override;
+
+#if WITH_EDITOR
+	// 에디터에선 캐시를 끈다. C++ 상수 변경 후 Live Coding 해도 캐시된 옛 결과가 나오지 않게.
+	virtual bool IsCacheable(const UPCGSettings* InSettings) const override { return false; }
+#endif
 };

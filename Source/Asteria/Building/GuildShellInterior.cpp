@@ -107,18 +107,18 @@ namespace GuildShell
 			// 긴 벽(A면 V=0 / B면 V=Span) 기둥 + 45도 버팀대, 기둥에 벽 등. 문·창 자리는 피한다.
 			for (const int32 Side : { 0, 2 })
 			{
-				const double Along = Side == 0 ? U : Len - U;
+				const double Along = AlongWall(Side, U, 0.0);
 				if (IsOpen(Side, Along, 40.0))
 				{
 					continue;
 				}
-				const double Dir = Side == 0 ? 1.0 : -1.0;
-				const double V = Side == 0 ? PostV : Span - PostV;
-				const double Yaw = Side == 0 ? 90.0 : -90.0;
-				Beam(Mesh::Rafter, U, V, 0.0, 0.0, 90.0, TieBeamZ - BeamHalf);
-				Beam(Mesh::Rafter, U, V + Dir * BeamHalf, TieBeamZ - BeamHalf - 90.0, Yaw, 45.0, 127.0);
-				Add(Blocking, Mesh::Sconce, U, V + Dir * BeamHalf, SconceZ, Yaw);
-				AddLight(SconceLights, U, V + Dir * 45.0, SconceZ);
+				const FVector2D Post = OnWall(Side, Along, PostV);
+				Beam(Mesh::Rafter, Post.X, Post.Y, 0.0, 0.0, 90.0, TieBeamZ - BeamHalf);
+				AddOnWall(Blocking, Mesh::Rafter, Side, Along, PostV + BeamHalf, TieBeamZ - BeamHalf - 90.0, 90.0,
+					FVector(127.0 / Cell, 1.0, 1.0), 45.0);
+				AddOnWall(Blocking, Mesh::Sconce, Side, Along, PostV + BeamHalf, SconceZ, 90.0);
+				const FVector2D Light = OnWall(Side, Along, PostV + 45.0);
+				AddLight(SconceLights, Light.X, Light.Y, SconceZ);
 			}
 		}
 
@@ -133,10 +133,11 @@ namespace GuildShell
 			Prev = U;
 			for (const int32 Side : { 0, 2 })
 			{
-				if (!IsOpen(Side, Side == 0 ? Mid : Len - Mid, 60.0))
+				const double Along = AlongWall(Side, Mid, 0.0);
+				if (!IsOpen(Side, Along, 60.0))
 				{
 					const FSoftObjectPath& Banner = Mesh::WallBanners[BannerIndex++ % UE_ARRAY_COUNT(Mesh::WallBanners)];
-					Add(Blocking, Banner, Mid, Side == 0 ? WallFace + 2.0 : Span - WallFace - 2.0, WallBannerTop, 0.0);
+					AddOnWall(Blocking, Banner, Side, Along, WallFace + 2.0, WallBannerTop);
 				}
 			}
 		}
@@ -147,17 +148,16 @@ namespace GuildShell
 		{
 			return;
 		}
-		for (int32 End = 0; End < 2; ++End)
+		for (const int32 Side : { 3, 1 })
 		{
-			// U=0 박공은 벽 3(V가 줄어드는 방향), U=Len 박공은 벽 1.
-			const int32 Side = End == 0 ? 3 : 1;
-			const double U = End == 0 ? WallFace : Len - WallFace;
-			for (const double V : { SconceV, Span - SconceV })
+			// 두 자리가 벽 가운데 기준 대칭이라 벽 진행 방향과 상관없이 같은 Along 값을 쓴다.
+			for (const double Along : { SconceV, Span - SconceV })
 			{
-				if (!IsOpen(Side, End == 0 ? Span - V : V, 40.0))
+				if (!IsOpen(Side, Along, 40.0))
 				{
-					Add(Blocking, Mesh::Sconce, U, V, SconceZ, End == 0 ? 0.0 : 180.0);
-					AddLight(SconceLights, U + (End == 0 ? 35.0 : -35.0), V, SconceZ);
+					AddOnWall(Blocking, Mesh::Sconce, Side, Along, WallFace, SconceZ, 90.0);
+					const FVector2D Light = OnWall(Side, Along, WallFace + 35.0);
+					AddLight(SconceLights, Light.X, Light.Y, SconceZ);
 				}
 			}
 		}

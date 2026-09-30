@@ -24,6 +24,28 @@ namespace GuildShell
 			const int32 K = Cells >= 3 ? FMath::Clamp(Cells / 2 + Offset, 1, Cells - 2) : 0;
 			return K * Cell + Cell * 0.5;
 		}
+
+		// 문이 차지하는 첫·끝 칸(X, Y). 짝수 칸 벽이면 경계 양옆 두 칸, 홀수면 한 칸. 문 없으면 -1.
+		FIntPoint DoorCells(double DoorAlong)
+		{
+			if (DoorAlong < 0.0)
+			{
+				return FIntPoint(-1, -1);
+			}
+			if (FMath::IsNearlyZero(FMath::Fmod(DoorAlong, Cell)))
+			{
+				const int32 First = FMath::RoundToInt(DoorAlong / Cell) - 1;
+				return FIntPoint(First, First + 1);
+			}
+			const int32 First = FMath::FloorToInt(DoorAlong / Cell);
+			return FIntPoint(First, First);
+		}
+
+		// 양 끝에서 센 번호가 홀수인 칸에 창(좌우 대칭).
+		bool IsWindowCell(int32 Cells, int32 i)
+		{
+			return FMath::Min(i, Cells - 1 - i) % 2 == 1;
+		}
 	}
 
 	FGuildShellBuilder::FGuildShellBuilder(int32 InWidth, int32 InHeight, const FGuildShellDoor (&Doors)[4])
@@ -53,6 +75,20 @@ namespace GuildShell
 			{
 				W.DoorAlong = DoorCenter(W.Cells, Door.Offset);
 			}
+
+			const FIntPoint DoorCell = DoorCells(W.DoorAlong);
+			for (int32 i = 0; i < W.Cells; ++i)
+			{
+				if ((i < DoorCell.X || i > DoorCell.Y) && IsWindowCell(W.Cells, i))
+				{
+					const double Mid = i * Cell + Cell * 0.5;
+					W.Openings.Emplace(Mid - WindowHalfWidth, Mid + WindowHalfWidth);
+				}
+			}
+			if (W.DoorAlong >= 0.0)
+			{
+				W.Openings.Emplace(W.DoorAlong - DoorHalfWidth - DoorClearance, W.DoorAlong + DoorHalfWidth + DoorClearance);
+			}
 		}
 
 		BuildBase();
@@ -81,12 +117,23 @@ namespace GuildShell
 		Add(Blocking, Mesh, U, V, Z, Yaw, FVector(Length / Cell, 1.0, 1.0), Pitch);
 	}
 
-	void FGuildShellBuilder::AddOnWall(FGuildShellMeshPoints& Out, const FSoftObjectPath& Mesh, int32 Side, double Along, double Lateral,
-		double Z, double YawOffset, FVector Scale)
+	FVector2D FGuildShellBuilder::OnWall(int32 Side, double Along, double Lateral) const
 	{
 		const FWall& W = Walls[Side];
-		const FVector2D P = W.Start + W.Dir * Along + W.Inward() * Lateral;
-		Add(Out, Mesh, P.X, P.Y, Z, W.Yaw + YawOffset, Scale);
+		return W.Start + W.Dir * Along + W.Inward() * Lateral;
+	}
+
+	double FGuildShellBuilder::AlongWall(int32 Side, double U, double V) const
+	{
+		const FWall& W = Walls[Side];
+		return FVector2D::DotProduct(FVector2D(U, V) - W.Start, W.Dir);
+	}
+
+	void FGuildShellBuilder::AddOnWall(FGuildShellMeshPoints& Out, const FSoftObjectPath& Mesh, int32 Side, double Along, double Lateral,
+		double Z, double YawOffset, FVector Scale, double Pitch)
+	{
+		const FVector2D P = OnWall(Side, Along, Lateral);
+		Add(Out, Mesh, P.X, P.Y, Z, Walls[Side].Yaw + YawOffset, Scale, Pitch);
 	}
 
 	void FGuildShellBuilder::AddLight(TArray<FTransform>& Out, double U, double V, double Z) const
@@ -136,37 +183,25 @@ namespace GuildShell
 	{
 		for (int32 Side = 0; Side < 4; ++Side)
 		{
-			FWall& W = Walls[Side];
-
-			// 문이 차지하는 칸: 짝수 칸 벽이면 경계 양옆 두 칸, 홀수면 한 칸.
+			const FWall& W = Walls[Side];
 			const double C = W.DoorAlong;
-			const bool bDoor = C >= 0.0;
-			const bool bBoundary = bDoor && FMath::IsNearlyZero(FMath::Fmod(C, Cell));
-			const int32 First = !bDoor ? -1 : bBoundary ? FMath::RoundToInt(C / Cell) - 1 : FMath::FloorToInt(C / Cell);
-			const int32 Last = !bDoor ? -1 : bBoundary ? First + 1 : First;
+			const FIntPoint DoorCell = DoorCells(C);
 
 			for (int32 i = 0; i < W.Cells; ++i)
 			{
-				if (i >= First && i <= Last)
+				if (i >= DoorCell.X && i <= DoorCell.Y)
 				{
 					continue;
 				}
-				// 양 끝에서 센 번호가 홀수인 칸에 창(좌우 대칭).
-				const bool bWindow = FMath::Min(i, W.Cells - 1 - i) % 2 == 1;
-				AddOnWall(Blocking, bWindow ? Mesh::WindowWall : Mesh::Wall, Side, i * Cell, 0.0, 0.0);
-				if (bWindow)
-				{
-					const double Mid = i * Cell + Cell * 0.5;
-					W.Openings.Emplace(Mid - WindowHalfWidth, Mid + WindowHalfWidth);
-				}
+				AddOnWall(Blocking, IsWindowCell(W.Cells, i) ? Mesh::WindowWall : Mesh::Wall, Side, i * Cell, 0.0, 0.0);
 			}
-			if (!bDoor)
+			if (C < 0.0)
 			{
 				continue;
 			}
-			W.Openings.Emplace(C - DoorHalfWidth - DoorClearance, C + DoorHalfWidth + DoorClearance);
 
 			// 문 양옆 조각: 비운 칸의 남은 폭을 채우고 문 쪽으로 5 겹친다.
+			const bool bBoundary = DoorCell.Y > DoorCell.X; // 문이 칸 경계에 걸려 두 칸을 비움
 			const double FillerWidth = bBoundary ? Cell : Cell * 0.5;
 			const double Gap = FillerWidth - DoorHalfWidth + SeamOverlap;
 			const FSoftObjectPath& Filler = bBoundary ? Mesh::Wall : Mesh::WallHalf;

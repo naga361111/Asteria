@@ -105,7 +105,7 @@ namespace GuildShell
 			double Yaw = 0.0;
 			int32 Cells = 0;
 			double DoorAlong = -1.0;        // 문 중심(벽 시작에서 잰 거리), 문 없으면 음수
-			TArray<FVector2D> Openings;     // 문·창 구간(벽 시작에서 잰 거리). 장식이 피한다.
+			TArray<FVector2D> Openings;     // 문·창 구간(벽 시작에서 잰 거리). 생성자에서 채우고 장식이 피한다.
 
 			FVector2D Inward() const { return FVector2D(-Dir.Y, Dir.X); }
 		};
@@ -134,9 +134,12 @@ namespace GuildShell
 			FVector Scale = FVector::OneVector, double Pitch = 0.0);
 		// Blocking에 기본 치수 300인 보를 Length 길이로 늘려 놓는다.
 		void Beam(const FSoftObjectPath& Mesh, double U, double V, double Z, double Yaw, double Pitch, double Length);
-		// 벽 Side를 따라: Along = 벽 시작에서 진행 방향 거리, Lateral = 실내 쪽 거리.
+		// 벽 Side를 따라: Along = 벽 시작에서 진행 방향 거리, Lateral = 실내 쪽 거리. 건물 좌표(U, V)로 바꾼다.
+		FVector2D OnWall(int32 Side, double Along, double Lateral) const;
+		// OnWall의 역: 건물 좌표(U, V)를 벽 Side 시작에서 잰 진행 방향 거리로.
+		double AlongWall(int32 Side, double U, double V) const;
 		void AddOnWall(FGuildShellMeshPoints& Out, const FSoftObjectPath& Mesh, int32 Side, double Along, double Lateral, double Z,
-			double YawOffset = 0.0, FVector Scale = FVector::OneVector);
+			double YawOffset = 0.0, FVector Scale = FVector::OneVector, double Pitch = 0.0);
 		void AddLight(TArray<FTransform>& Out, double U, double V, double Z) const;
 		// 벽 Side의 Along 위치(±HalfWidth)가 문·창 구간과 겹치는지.
 		bool IsOpen(int32 Side, double Along, double HalfWidth) const;
