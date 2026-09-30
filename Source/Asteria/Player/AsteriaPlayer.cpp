@@ -70,6 +70,11 @@ AAsteriaPlayer::AAsteriaPlayer()
 	CameraComp->SetupAttachment(RootComponent);
 	CameraComp->bUsePawnControlRotation = true;
 	CameraComp->SetRelativeLocation(FVector(20.0f, 0.0f, 70.0f));
+	// 자동 노출(밝기 적응) 끔. 밝기는 BP에서 카메라 Exposure Compensation으로 조정.
+	CameraComp->PostProcessSettings.bOverride_AutoExposureMethod = true;
+	CameraComp->PostProcessSettings.AutoExposureMethod = AEM_Manual;
+	CameraComp->PostProcessSettings.bOverride_AutoExposureBias = true;
+	CameraComp->PostProcessSettings.AutoExposureBias = 12.5f; // 실내 기준
 
 	BoxComp = CreateDefaultSubobject<UBoxComponent>(FName("InteractionArea"));
 	BoxComp->SetupAttachment(CameraComp);

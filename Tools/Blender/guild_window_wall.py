@@ -82,8 +82,8 @@ def main():
         if m == "MI_PlanksFLoor" or (m == "MI_Trim_Wood_A_Rough" and hi <= 0.15):
             kill += comp                      # 실내 곡선 장식·가로대, 밑단 목재
     bmesh.ops.delete(wb, geom=kill, context='FACES')
-    kill = [f for f in wb.faces if f.calc_center_median().z > SPLICE_Z - 0.001 and wmats[f.material_index] in ("MI_Plaster_A", STONE)]
-    bmesh.ops.delete(wb, geom=kill, context='FACES')  # 윗면(300)은 Tavern_C 원본이 이어받는다
+    # 윗면(300)은 남긴다: Tavern_C 윗부분은 판자면이 y 0.031/0.369라 D_Window 면(0/0.4)과 3cm 어긋나고 밑이 뚫려 있어,
+    # 윗면을 지우면 양쪽 틈으로 벽 속이 뚫려 빛이 샌다.
 
     # 유리는 한쪽 면만 그려진다. 원본은 실내를 향해 안에서는 발광면에 막히고 밖에서 안이 보인다 → 뒤집어 안에서 밖이 보이게.
     bmesh.ops.reverse_faces(wb, faces=[f for f in wb.faces if wmats[f.material_index] == "MI_Window_Emissive"])
