@@ -81,15 +81,6 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_SettleQuestAssignment(int32 AssignmentId);
 
-#if WITH_EDITOR
-	// 디버그 콘솔 명령 "ShellSize 가로반 세로반". 건물 외곽의 가운데 칸을 뺀 한쪽 칸 수(칸 수 = 2N+1)를 바꾼다. 에디터 빌드 전용.
-	UFUNCTION(Exec)
-	void ShellSize(int32 HalfWidth, int32 HalfHeight);
-
-	// 외곽 크기 변경의 클라→서버 경계. 수락과 같은 이유로 폰이 대신 받는다. 에디터 빌드 전용.
-	UFUNCTION(Server, Reliable)
-	void Server_SetShellSize(int32 HalfWidth, int32 HalfHeight);
-#endif
 
 	bool IsUIInputMode() const { return bUIInputMode; }
 

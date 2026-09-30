@@ -25,13 +25,44 @@ Docs/Asteria_Magic_System.md 참고
 * 효용-AI NPC — 미착수 (후순위)
 상황별 점수로 행동을 고르는 NPC. 기억·친밀도·소문 포함
 
-* 길드 자금을 이용해 대기 구역을 늘린다던가, 건물을 확장한다던가 하는 사용처가 필요 - 추후 PCG로 건물을 짓게 되면 구현
+* 길드 자금을 이용해 대기 구역을 늘린다던가, 건물을 확장한다던가 하는 사용처가 필요 - 격자 건물(아래) 완성 후 `SetEdge`/`SetFloor`로 구현
 
-## 개선점 (2026-09-29 길드 건물 PCG 리팩터링 검증)
+* 격자 건물 — 미착수 (계획은 아래 "격자 건물 구현 계획")
 
-3. [확장성] 건물이 월드 원점 고정 — `PCGGuildShellSettings.cpp` 노드가 볼륨 위치·회전을 무시. 해결: PCG 실행 정보(ExecutionSource)의 볼륨 트랜스폼/경계 최소 모서리를 모든 점에 적용.
 
-7. [의존성] `MaxCells`가 PCG 노드 클래스에 있어 서비스가 PCG 헤더를 끌어옴 → `GuildShell::MaxCells`(GuildShellBuilder.h)로 이동.
-8. [사소] 노드의 문 속성 8개+MakeDoor → `FGuildShellDoor` 4개(UE 5.8 구조체 필드 오버라이드, 그래프 핀 재연결 필요, 선택). `GuildShellDoor.h` "그래프가 멈춘다" 주석 → 노드가 멈춤.
+## 격자 건물 구현 계획
 
-참고(결함 아님): 문 설정은 복제 안 됨(실행 중 건물 확장 시 서비스가 함께 복제해야 함). 메시 경로가 C++ 문자열이라 에셋 이동·이름 변경 자동 반영 안 되고, 패키징 때 저장 레벨에 안 쓰인 메시가 빠질 수 있음 → 건물 메시 폴더를 쿠킹 목록에 추가.
+기존 건물·카운터 PCG(그래프, `Source/Asteria/PCG`, `Source/Asteria/Building`, `GuildShellService`)는 삭제 완료. 건물 벽은 **PCG를 쓰지 않고** 액터 + 인스턴스 메시(ISM)로 직접 배치한다.
+- 이유: 배치 규칙이 결정적이라 PCG가 할 일이 없음 / 실행 중 변 단위 편집(길드 확장)이 핵심인데 PCG는 배열 파라미터 전달·전체 재생성·캐시 문제가 있음 / 액터가 변 목록을 직접 복제하면 서버 권위가 단순해짐.
+
+### 데이터 모델
+- 정수 좌표의 무한 격자, 한 칸 300. 액터 트랜스폼이 원점(위치·회전을 따름).
+- **변 키** = 꼭짓점 `FIntPoint` + `Axis`(0=+X, 1=+Y). 키가 유일해 한 변에 모듈 하나.
+- **모듈**: `UBuildingEdgeModule : UDataAsset { UStaticMesh* Mesh; }` — 300×300, 피벗 아래·왼쪽, +X로 뻗고 두께 -Y. 벽·창문·문 모두 모듈 에셋(`DA_Edge_Wall`/`Window`/`Door`). 새 종류는 에셋만 추가. 벽 길이에 따른 창·문 자동 배치 없음.
+- `FBuildingEdge { FIntPoint Vertex; uint8 Axis; bool bFlip; UBuildingEdgeModule* Module; }` — `bFlip`은 실내 면(판자·벽기둥 쪽)을 반대로.
+- 바닥: `TArray<FIntPoint> FloorCells`(칸 단위).
+- 메시는 C++ 문자열이 아니라 에셋·액터 속성으로 참조(이동·이름 변경·쿠킹 누락 문제 해소).
+
+### 배치 규칙 (PCG와 무관한 순수 계산 `BuildingGrid::Build(FloorCells, Edges) → Transforms + Meshes`)
+- **바닥 칸**: 판자 바닥, 무늬 방향이 돌지 않게 월드 축 기준.
+- **변**: 모듈 메시 + 위에 판자 줄(Plank, Z 300)을 **항상 한 세트**. `bFlip`이면 반대쪽 끝에서 시작해 yaw 180.
+- **꼭짓점 – 벽기둥**: 닿는 변마다 실내 면에. 반대편에 실내 방향이 같은 변이 곧게 이어지면 꼭짓점 가운데 1개(칸 경계), 아니면 꼭짓점에서 30 안쪽(벽 끝). L자 모서리는 두 끝 벽기둥이 맞붙음.
+- **꼭짓점 – 모서리 기둥**: 같은 방향 직선 연속을 뺀 모든 경우(끝, L, T, 십자, 실내 방향 반전)에 기둥 + 판자 높이(160)로 줄인 기둥. 위치는 축마다 그 축에 수직인 변의 바깥쪽으로 20.
+- 부품 치수는 이전 구현 기준: 벽기둥 반폭 30·반두께 6, 모서리 기둥 40×40×300, 벽 높이 300, 판자 160.
+
+### 액터 `ABuildingGrid` (`Source/Asteria/Building/`)
+- `bReplicates`, 레벨에 배치. `FloorCells`·`Edges`는 `ReplicatedUsing=OnRep_Layout`.
+- 세트 부품 속성: `FloorMesh`, `PlankMesh`, `PilasterMesh`, `ColumnMesh`.
+- `SetEdge(Vertex, Axis, Module /*null=제거*/, bFlip)`, `SetFloor(Cell, bOn)` — 서버만. 플레이어 요청(RPC)이 생기면 서버에서 좌표 범위·모듈 유효성 검증.
+- `Rebuild()`: 메시별 ISM을 비우고 `Build()` 결과로 다시 채움. `OnConstruction`·`OnRep_Layout`·`Set*`에서 호출. 전체 재생성으로 시작, 편집이 잦아지면 바뀐 변만 갱신.
+- 편집: `CallInEditor AddRectRoom()`(`RoomMin`/`RoomMax`로 외곽 벽 + 바닥 채움) 후 `Edges` 배열에서 변 모듈을 창·문으로 교체. `OnConstruction`으로 에디터 미리보기.
+
+### 구현 단계
+1. `UBuildingEdgeModule`, `FBuildingEdge`, `BuildingGrid::Build()` + 자동화 테스트 1개(3×2 방: 모서리 기둥 4개, 벽기둥 개수).
+2. `ABuildingGrid` 액터(ISM, 복제, `SetEdge`/`SetFloor`, `AddRectRoom`).
+3. 모듈 에셋 3종(`SM_Wall_Tavern_D`, `_Window`, `_Entrance_300`) 생성, Design 맵에 배치.
+
+### 주의
+- 내비메시가 Static(설정 없음) → 실행 중 벽 변경이 NPC 길찾기에 반영 안 됨. 실행 중 확장 구현 때 Runtime Generation을 `Dynamic`으로.
+- T자·십자에서 벽기둥이 가로지르는 벽과 겹칠 수 있음 → 구현 후 화면으로 확인·조정.
+- 카운터 PCG도 삭제됨 → 카운터 길이 조절 배치 수단 없음. 격자 모듈로 넣을지 별도 액터로 할지 미정.

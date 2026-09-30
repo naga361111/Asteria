@@ -11,7 +11,6 @@ class UQuestService;
 class UGuildService;
 class UGameClockService;
 class UNpcSpawnService;
-class UGuildShellService;
 
 /**
  *
@@ -38,7 +37,4 @@ public:
 
 	UPROPERTY(VisibleAnywhere, Category="Npc")
 	TObjectPtr<UNpcSpawnService> NpcSpawnService;
-
-	UPROPERTY(VisibleAnywhere, Category="Guild")
-	TObjectPtr<UGuildShellService> GuildShellService;
 };
