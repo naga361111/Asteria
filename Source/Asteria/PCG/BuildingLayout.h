@@ -26,6 +26,14 @@ namespace BuildingLayout
 	constexpr int32 MaxHalfCells = 15;
 	// 모서리 기둥을 벽 두께(40) 가운데에 놓는 외곽선 바깥 거리.
 	constexpr double CornerInset = 20.0;
+	// _D 벽 높이. 판자 줄이 이 높이에서 시작한다.
+	constexpr double WallHeight = 300.0;
+	// 판자 벽 높이. 위쪽 모서리 기둥(300)을 이 높이로 줄인다.
+	constexpr double PlankHeight = 160.0;
+	// 벽기둥 두께(25.2)의 절반. 외곽선에서 벽기둥 중심까지 거리라 뒷면이 외곽선에 맞아 벽 두께 속에 묻힌다.
+	constexpr double PilasterHalfDepth = 6.0;
+	// 벽기둥 폭(59.8)의 절반. 벽 끝에서 이만큼 들여 놓아 모서리 벽기둥의 가장자리를 모서리에 맞춘다.
+	constexpr double PilasterHalfWidth = 30.0;
 
 	// 메시. 배치 코드가 각 메시의 피벗·치수에 맞춰져 있어 메시를 바꾸면 해당 배치 코드도 봐야 한다.
 	namespace Mesh
@@ -39,6 +47,10 @@ namespace BuildingLayout
 		inline const FSoftObjectPath Entrance(TEXT("/Game/Hearthvale/Meshes/Walls/SM_Wall_Tavern_D_Entrance_300.SM_Wall_Tavern_D_Entrance_300"));
 		// 모서리 기둥(40×40×300, 중심 피벗). D 세트에 모서리 부품이 없어 이음새를 가린다.
 		inline const FSoftObjectPath Corner(TEXT("/Game/Hearthvale/Meshes/Walls/SM_Wall_House_A_Column_B.SM_Wall_House_A_Column_B"));
+		// 벽 위 판자 줄(300×160, 벽과 같은 피벗 규칙: 아래·왼쪽, +X로 뻗고 두께 -Y)
+		inline const FSoftObjectPath Plank(TEXT("/Game/Hearthvale/Meshes/Walls/SM_Wall_Wooden_Planks_A_300.SM_Wall_Wooden_Planks_A_300"));
+		// 벽면에 붙는 납작한 벽기둥(폭 60 × 두께 25 × 높이 305, 아래 가운데 피벗, 폭이 로컬 Y)
+		inline const FSoftObjectPath Pilaster(TEXT("/Game/Hearthvale/Meshes/Walls/SM_Wall_House_A_Column.SM_Wall_House_A_Column"));
 	}
 
 	/**
@@ -78,8 +90,8 @@ namespace BuildingLayout
 		void BuildWalls();
 		void BuildCorners();
 
-		// 벽 Side의 시작에서 진행 방향 거리 Along 위치에 벽 yaw로 놓는다.
-		void AddOnWall(const FSoftObjectPath& Mesh, int32 Side, double Along);
-		void Add(const FSoftObjectPath& Mesh, const FVector2D& Pos, double Yaw);
+		// 벽 Side의 시작에서 진행 방향 거리 Along, 실내 쪽 거리 Lateral, 높이 Z 위치에 벽 yaw + YawOffset으로 놓는다.
+		void AddOnWall(const FSoftObjectPath& Mesh, int32 Side, double Along, double Z = 0.0, double Lateral = 0.0, double YawOffset = 0.0);
+		void Add(const FSoftObjectPath& Mesh, const FVector2D& Pos, double Yaw, double Z = 0.0, const FVector& Scale = FVector::OneVector);
 	};
 }

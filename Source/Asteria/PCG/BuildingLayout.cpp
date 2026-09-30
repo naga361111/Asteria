@@ -44,16 +44,16 @@ namespace BuildingLayout
 		BuildCorners();
 	}
 
-	void FBuilder::Add(const FSoftObjectPath& Mesh, const FVector2D& Pos, double Yaw)
+	void FBuilder::Add(const FSoftObjectPath& Mesh, const FVector2D& Pos, double Yaw, double Z, const FVector& Scale)
 	{
-		Transforms.Emplace(FRotator(0.0, Yaw, 0.0), FVector(Pos.X, Pos.Y, 0.0));
+		Transforms.Emplace(FRotator(0.0, Yaw, 0.0), FVector(Pos.X, Pos.Y, Z), Scale);
 		Meshes.Add(Mesh);
 	}
 
-	void FBuilder::AddOnWall(const FSoftObjectPath& Mesh, int32 Side, double Along)
+	void FBuilder::AddOnWall(const FSoftObjectPath& Mesh, int32 Side, double Along, double Z, double Lateral, double YawOffset)
 	{
 		const FWall& W = Walls[Side];
-		Add(Mesh, W.Start + W.Dir * Along, W.Yaw);
+		Add(Mesh, W.Start + W.Dir * Along + W.Inward() * Lateral, W.Yaw + YawOffset, Z);
 	}
 
 	void FBuilder::BuildFloor()
@@ -70,12 +70,22 @@ namespace BuildingLayout
 
 	void FBuilder::BuildWalls()
 	{
-		// 모든 조각을 벽 yaw 그대로 놓는다(돌 면·두께가 바깥).
+		// 모든 조각을 벽 yaw 그대로 놓는다(돌 면·두께가 바깥). 칸마다 벽 위에 판자 줄 하나를 쌓는다.
+		// 칸 경계와 벽 양 끝마다 벽기둥 뒷면을 외곽선에 맞춰 벽 두께 속에 묻고 나머지를 실내로 내민다.
+		// yaw +90으로 폭(로컬 Y)이 벽을 따라가고 로컬 +X가 실내를 본다.
+		// 양 끝 벽기둥은 가장자리를 모서리에 맞춰, 실내 모서리마다 두 벽의 끝 벽기둥이 맞붙어 L자가 된다.
 		for (int32 Side = 0; Side < 4; ++Side)
 		{
 			const FWall& W = Walls[Side];
+			AddOnWall(Mesh::Pilaster, Side, PilasterHalfWidth, 0.0, PilasterHalfDepth, 90.0);
+			AddOnWall(Mesh::Pilaster, Side, W.Cells * Cell - PilasterHalfWidth, 0.0, PilasterHalfDepth, 90.0);
 			for (int32 i = 0; i < W.Cells; ++i)
 			{
+				if (i > 0)
+				{
+					AddOnWall(Mesh::Pilaster, Side, i * Cell, 0.0, PilasterHalfDepth, 90.0);
+				}
+				AddOnWall(Mesh::Plank, Side, i * Cell, WallHeight);
 				if (i == W.DoorCell)
 				{
 					AddOnWall(Mesh::Entrance, Side, i * Cell);
@@ -92,8 +102,11 @@ namespace BuildingLayout
 		{
 			const FWall& W = Walls[Side];
 			// 이 벽과 앞 벽의 두께 가운데선이 만나는 점.
-			const FVector2D Corner = W.Start - (W.Inward() + Walls[(Side + 3) % 4].Inward()) * CornerInset;
+			const FVector2D Inward = W.Inward() + Walls[(Side + 3) % 4].Inward();
+			const FVector2D Corner = W.Start - Inward * CornerInset;
 			Add(Mesh::Corner, Corner, W.Yaw);
+			// 판자 줄 모서리 틈을 메우려 같은 기둥을 위에 한 칸 더 쌓고, 160 높이 에셋이 없어 세로를 판자 높이에 맞춰 줄임.
+			Add(Mesh::Corner, Corner, W.Yaw, WallHeight, FVector(1.0, 1.0, PlankHeight / WallHeight));
 		}
 	}
 }

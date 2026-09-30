@@ -4,12 +4,10 @@
 [1단계]
 PCG/BuildingLayout.h / .cpp (수정)
 BuildingLayout::WallHeight: _D 벽 높이 300. 판자 줄이 이 높이에서 시작 (신규)
-BuildingLayout::PlankHeight: 판자 벽 높이 160. 모서리 기둥 높이 계산에 씀 (신규)
 BuildingLayout::Mesh::Plank: SM_Wall_Wooden_Planks_A_300(300×160, 벽과 같은 피벗 규칙: 아래·왼쪽, +X로 뻗고 두께 -Y) (신규)
 BuildWalls(): 칸마다 _D 벽(일반·창·문) 위 WallHeight 높이에 Plank 하나를 같은 위치·yaw로 쌓음 - AddOnWall() 호출 (수정)
-BuildCorners(): 모서리 기둥(높이 300)을 WallHeight + PlankHeight(460)까지 세로로 늘려 판자 줄 모서리 틈도 가림 - Add() 호출 (수정, 추가)
 AddOnWall(): 높이(Z) 인자를 받음 - Add() 호출 (수정)
-Add(): 높이(Z)와 크기(Scale) 인자를 받음 (수정)
+Add(): 높이(Z) 인자를 받음 (수정)
 
 
 [2단계]
