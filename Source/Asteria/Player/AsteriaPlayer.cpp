@@ -211,7 +211,32 @@ void AAsteriaPlayer::Interact(const FInputActionValue& Value)
 	IInteractable* Target = Cast<IInteractable>(OverlappedActor.Get());
 	if (Target && Target->CanInteract())
 		Target->OnInteract(this);
-	
+
+}
+
+void AAsteriaPlayer::SelectMesh(const FInputActionValue& Value)
+{
+	const int32 Num = PlaceableMeshes.Num();
+	if (Num == 0) return;
+
+	const float Axis = Value.Get<float>();
+	if (Axis == 0.f) return;
+
+	const int32 Step = Axis > 0.f ? 1 : -1;
+	SelectedMeshIndex = (SelectedMeshIndex + Step + Num) % Num;
+}
+
+void AAsteriaPlayer::Place(const FInputActionValue& Value)
+{
+	if (!Grid.IsValid() || !PlaceableMeshes.IsValidIndex(SelectedMeshIndex)) return;
+
+	FRay Ray;
+	if (!GetViewRay(Ray)) return;
+
+	const FBuildingGridEdge* Edge = Grid->FindNearestEdge(Ray);
+	if (Edge == nullptr) return;
+
+	Grid->SetEdgeMesh(Edge->Vertex, Edge->Axis, PlaceableMeshes[SelectedMeshIndex]);
 }
 
 // Called to bind functionality to input
@@ -224,5 +249,7 @@ void AAsteriaPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		EIC->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AAsteriaPlayer::Move);
 		EIC->BindAction(LookAction, ETriggerEvent::Triggered, this, &AAsteriaPlayer::Look);
 		EIC->BindAction(InteractAction, ETriggerEvent::Started, this, &AAsteriaPlayer::Interact);
+		EIC->BindAction(SelectAction, ETriggerEvent::Triggered, this, &AAsteriaPlayer::SelectMesh);
+		EIC->BindAction(PlaceAction, ETriggerEvent::Started, this, &AAsteriaPlayer::Place);
 	}
 }

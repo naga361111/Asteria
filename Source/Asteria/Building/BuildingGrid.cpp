@@ -131,6 +131,30 @@ const FBuildingGridEdge* ABuildingGrid::FindNearestEdge(const FRay& Ray) const
 	return FMath::Abs(V - RoundV) <= FMath::Abs(U - RoundU) ? XEdge : YEdge;
 }
 
+void ABuildingGrid::SetEdgeMesh(const FIntPoint& Vertex, int32 Axis, UStaticMesh* Mesh)
+{
+	// ponytail: CalculateEdges()와 같은 선형 탐색, 변이 수백 개를 넘으면 TMap 키 조회로.
+	FBuildingGridEdge* Edge = Edges.FindByPredicate([&Vertex, Axis](const FBuildingGridEdge& Candidate)
+	{
+		return Candidate.Vertex == Vertex && Candidate.Axis == Axis;
+	});
+	if (Edge == nullptr)
+	{
+		return;
+	}
+	Edge->Mesh = Mesh;
+
+	// 이 격자의 인스턴스 메시 컴포넌트는 SpawnEdgeMeshes()가 만든 것뿐. 실행 중에는 엔진이 지워 주지 않으므로 직접 파괴.
+	TArray<UInstancedStaticMeshComponent*> MeshComponents;
+	GetComponents(MeshComponents);
+	for (UInstancedStaticMeshComponent* MeshComponent : MeshComponents)
+	{
+		MeshComponent->DestroyComponent();
+	}
+
+	SpawnEdgeMeshes();
+}
+
 void ABuildingGrid::SpawnEdgeMeshes()
 {
 	// 메시 종류마다 인스턴스드 메시 컴포넌트 하나.

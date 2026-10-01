@@ -57,6 +57,9 @@ public:
 	// 광선이 격자 바닥 평면과 만나는 점에서 가장 가까운 변. 평면과 안 만나거나 격자 밖이면 nullptr.
 	const FBuildingGridEdge* FindNearestEdge(const FRay& Ray) const;
 
+	// (Vertex, Axis) 키의 변에 Mesh를 할당하고 인스턴스 메시를 다시 만든다. 키에 해당하는 변이 없으면 무시.
+	void SetEdgeMesh(const FIntPoint& Vertex, int32 Axis, UStaticMesh* Mesh);
+
 private:
 	void CalculateEdges();
 	void SpawnEdgeMeshes();

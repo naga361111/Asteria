@@ -11,6 +11,7 @@
 
 struct FInputActionValue;
 class ABuildingGrid;
+class UStaticMesh;
 
 UCLASS()
 class ASTERIA_API AAsteriaPlayer : public ACharacter
@@ -43,7 +44,28 @@ protected:
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	void Interact(const FInputActionValue& Value);
-	
+
+	// 선택 메시 전환 액션(1D: 마우스 휠).
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> SelectAction;
+
+	// 휠 방향에 따라 SelectedMeshIndex를 한 칸 옮긴다. 끝을 넘으면 반대쪽 끝으로.
+	void SelectMesh(const FInputActionValue& Value);
+
+	// 잡을 수 있는 메시 목록.
+	UPROPERTY(EditDefaultsOnly, Category = "Placement")
+	TArray<TObjectPtr<UStaticMesh>> PlaceableMeshes;
+
+	// 선택된 메시의 PlaceableMeshes 인덱스.
+	int32 SelectedMeshIndex = 0;
+
+	// 배치 액션(클릭).
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> PlaceAction;
+
+	// 시선이 가리키는 변에 선택된 메시를 할당한다.
+	void Place(const FInputActionValue& Value);
+
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UCameraComponent> CameraComp;
 	
