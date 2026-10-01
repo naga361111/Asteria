@@ -11,3 +11,4 @@
 - [PCG Filter By Index crash](pcg-filter-by-index-empty-crash.md) — 빈 데이터/음수 인덱스로 에디터 크래시, Merge Points+Branch로 막고 실행 전 저장
 - [EDIT COPY via Python crashes](unreal-edit-copy-python-crash.md) — execute_console_command(None,"EDIT COPY") 에디터 크래시, 속성 비교는 직접 읽기로
 - [Spec approval: show then ask in text](spec-show-before-askuserquestion.md) — AskUserQuestion 직전 텍스트가 안 보임, 스펙 출력 후 텍스트로 승인 묻고 턴 종료
+- [Unreal command-line Python](unreal-commandline-python.md) — MCP 끊기면 UnrealEditor-Cmd -run=pythonscript로 에셋 생성(에디터 실행 중 OK), 출력은 log_warning
