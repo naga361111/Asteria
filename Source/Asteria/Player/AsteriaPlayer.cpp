@@ -180,7 +180,7 @@ void AAsteriaPlayer::Tick(float DeltaTime)
 	// 격자·광선·변 중 하나라도 없으면 null로 미리보기를 숨긴다.
 	FRay Ray;
 	const FBuildingGridEdge* Edge = Grid.IsValid() && GetViewRay(Ray) ? Grid->FindNearestEdge(Ray) : nullptr;
-	UpdatePreview(Edge);
+	UpdatePreview(Edge, Ray.Origin);
 	if (Edge == nullptr) return;
 
 	// 변 Transform은 액터 기준이라 격자 트랜스폼을 곱해 월드로. 변은 로컬 X축 방향으로 CellSize.
@@ -189,7 +189,7 @@ void AAsteriaPlayer::Tick(float DeltaTime)
 	DrawDebugLine(GetWorld(), World.TransformPosition(-Half), World.TransformPosition(Half), FColor::Green);
 }
 
-void AAsteriaPlayer::UpdatePreview(const FBuildingGridEdge* Edge)
+void AAsteriaPlayer::UpdatePreview(const FBuildingGridEdge* Edge, const FVector& ViewOrigin)
 {
 	// 재질이 없으면 원래 재질 그대로 보이므로 띄우지 않는다.
 	if (Edge == nullptr || !PlaceableMeshes.IsValidIndex(SelectedMeshIndex) || PreviewMaterial == nullptr)
@@ -207,8 +207,19 @@ void AAsteriaPlayer::UpdatePreview(const FBuildingGridEdge* Edge)
 	}
 
 	// SpawnEdgeMeshes()가 인스턴스를 놓는 위치와 같다.
-	PreviewComp->SetWorldTransform(ABuildingGrid::GetEdgeMeshTransform(*Edge, bPlaceFlipped) * Grid->GetActorTransform());
+	PreviewComp->SetWorldTransform(ABuildingGrid::GetEdgeMeshTransform(*Edge, ShouldFlip(*Edge, ViewOrigin)) * Grid->GetActorTransform());
 	PreviewComp->SetVisibility(true, true);
+}
+
+bool AAsteriaPlayer::ShouldFlip(const FBuildingGridEdge& Edge, const FVector& ViewOrigin) const
+{
+	// 뒤집지 않은 메시의 월드 트랜스폼. 피벗이 변 중점이고 앞은 로컬 -Y.
+	const FTransform World = ABuildingGrid::GetEdgeMeshTransform(Edge, false) * Grid->GetActorTransform();
+	const FVector Front = -World.GetUnitAxis(EAxis::Y);
+
+	// 앞이 시점 반대편이면 자동으로 뒤집고, R(bPlaceFlipped)로 한 번 더 뒤집는다.
+	const bool bAutoFlip = FVector::DotProduct(Front, ViewOrigin - World.GetLocation()) < 0.f;
+	return bAutoFlip != bPlaceFlipped;
 }
 
 bool AAsteriaPlayer::GetViewRay(FRay& OutRay) const
@@ -277,7 +288,7 @@ void AAsteriaPlayer::Place(const FInputActionValue& Value)
 	const FBuildingGridEdge* Edge = Grid->FindNearestEdge(Ray);
 	if (Edge == nullptr) return;
 
-	Grid->SetEdgeMesh(Edge->Vertex, Edge->Axis, PlaceableMeshes[SelectedMeshIndex], bPlaceFlipped);
+	Grid->SetEdgeMesh(Edge->Vertex, Edge->Axis, PlaceableMeshes[SelectedMeshIndex], ShouldFlip(*Edge, Ray.Origin));
 }
 
 void AAsteriaPlayer::FlipPlacement(const FInputActionValue& Value)

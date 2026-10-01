@@ -93,7 +93,10 @@ protected:
 	TObjectPtr<UMaterialInterface> PreviewMaterial;
 
 	// Edge가 있고 선택된 메시가 유효하면 그 변 위치에 미리보기를 띄우고, 아니면 숨긴다. Tick()이 매 프레임 호출.
-	void UpdatePreview(const FBuildingGridEdge* Edge);
+	void UpdatePreview(const FBuildingGridEdge* Edge, const FVector& ViewOrigin);
+
+	// Edge에 놓을 메시의 최종 뒤집힘 여부. 뒤집지 않은 메시의 앞(-Y)이 ViewOrigin 반대편을 향하면 뒤집고, 그 위에 bPlaceFlipped를 한 번 더 적용한다.
+	bool ShouldFlip(const FBuildingGridEdge& Edge, const FVector& ViewOrigin) const;
 
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UCameraComponent> CameraComp;
