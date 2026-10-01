@@ -32,7 +32,7 @@ Docs/Asteria_Magic_System.md 참고
 
 ## 격자 건물 구현 계획
 
-기존 건물·카운터 PCG(그래프, `Source/Asteria/PCG`, `Source/Asteria/Building`, `GuildShellService`)는 삭제 완료. 건물 벽은 **PCG를 쓰지 않고** 액터 + 인스턴스 메시(ISM)로 직접 배치한다.
+건물 벽은 **PCG를 쓰지 않고** 액터 + 인스턴스 메시(ISM)로 직접 배치한다.
 - 이유: 배치 규칙이 결정적이라 PCG가 할 일이 없음 / 실행 중 변 단위 편집(길드 확장)이 핵심인데 PCG는 배열 파라미터 전달·전체 재생성·캐시 문제가 있음 / 액터가 변 목록을 직접 복제하면 서버 권위가 단순해짐.
 
 ### 데이터 모델
