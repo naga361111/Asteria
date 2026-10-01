@@ -40,7 +40,10 @@ void ABuildingGrid::CalculateEdges()
 	{
 		for (int32 X = 0; X < GridSize.X; ++X)
 		{
-			Edges.Emplace(FRotator(0.f, 0.f, 0.f), FVector((X + 0.5f) * CellSize, Y * CellSize, 0.f));
+			FBuildingGridEdge& Edge = Edges.AddDefaulted_GetRef();
+			Edge.Vertex = FIntPoint(X, Y);
+			Edge.Axis = 0;
+			Edge.Transform = FTransform(FRotator(0.f, 0.f, 0.f), FVector((X + 0.5f) * CellSize, Y * CellSize, 0.f));
 		}
 	}
 
@@ -49,7 +52,10 @@ void ABuildingGrid::CalculateEdges()
 	{
 		for (int32 Y = 0; Y < GridSize.Y; ++Y)
 		{
-			Edges.Emplace(FRotator(0.f, 90.f, 0.f), FVector(X * CellSize, (Y + 0.5f) * CellSize, 0.f));
+			FBuildingGridEdge& Edge = Edges.AddDefaulted_GetRef();
+			Edge.Vertex = FIntPoint(X, Y);
+			Edge.Axis = 1;
+			Edge.Transform = FTransform(FRotator(0.f, 90.f, 0.f), FVector(X * CellSize, (Y + 0.5f) * CellSize, 0.f));
 		}
 	}
 }
@@ -66,11 +72,12 @@ void ABuildingGrid::DrawEdges()
 
 	// 선 컴포넌트는 월드 좌표로 그리므로 액터 트랜스폼을 적용한다.
 	const FTransform& ActorTransform = GetActorTransform();
-	for (const FTransform& Edge : Edges)
+	for (const FBuildingGridEdge& Edge : Edges)
 	{
-		const FVector HalfDir = Edge.GetRotation().GetForwardVector() * (CellSize * 0.5f);
-		const FVector Start = ActorTransform.TransformPosition(Edge.GetLocation() - HalfDir);
-		const FVector End = ActorTransform.TransformPosition(Edge.GetLocation() + HalfDir);
+		const FTransform& EdgeTransform = Edge.Transform;
+		const FVector HalfDir = EdgeTransform.GetRotation().GetForwardVector() * (CellSize * 0.5f);
+		const FVector Start = ActorTransform.TransformPosition(EdgeTransform.GetLocation() - HalfDir);
+		const FVector End = ActorTransform.TransformPosition(EdgeTransform.GetLocation() + HalfDir);
 		EdgeLines->DrawLine(Start, End, FLinearColor::Green, SDPG_World, 2.f);
 	}
 }
