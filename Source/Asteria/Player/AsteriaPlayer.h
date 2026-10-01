@@ -10,6 +10,7 @@
 #include "AsteriaPlayer.generated.h"
 
 struct FInputActionValue;
+class ABuildingGrid;
 
 UCLASS()
 class ASTERIA_API AAsteriaPlayer : public ACharacter
@@ -63,6 +64,9 @@ protected:
 
 	// UI 커서 상태는 로컬 클라 전용. 월드 액터가 아니라 로컬 플레이어가 소유한다.
 	bool bUIInputMode = false;
+
+	// 시선이 가리키는 변을 찾을 격자. 레벨의 첫 번째 ABuildingGrid. BeginPlay()가 설정.
+	TWeakObjectPtr<ABuildingGrid> Grid;
 
 public:
 	// 커서/입력 모드 전환. true면 GameAndUI + 커서 표시, false면 GameOnly + 커서 숨김.

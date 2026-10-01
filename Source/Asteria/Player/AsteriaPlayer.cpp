@@ -6,7 +6,9 @@
 #include "DrawDebugHelpers.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "EngineUtils.h"
 #include "InputActionValue.h"
+#include "Building/BuildingGrid.h"
 #include "Interaction/Interactable.h"
 #include "GameState/AsteriaGameState.h"
 #include "GameState/Components/CounterService.h"
@@ -139,6 +141,13 @@ void AAsteriaPlayer::BeginPlay()
 	// AddDynamic(수신 객체, &클래스::핸들러). 핸들러는 위에서 선언한 UFUNCTION들.
 	BoxComp->OnComponentBeginOverlap.AddDynamic(this, &AAsteriaPlayer::OnDetectionBeginOverlap);
 	BoxComp->OnComponentEndOverlap.AddDynamic(this, &AAsteriaPlayer::OnDetectionEndOverlap);
+
+	// 레벨의 첫 번째 격자.
+	TActorIterator<ABuildingGrid> It(GetWorld());
+	if (It)
+	{
+		Grid = *It;
+	}
 }
 
 // Called every frame
@@ -146,13 +155,19 @@ void AAsteriaPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// 시선 광선은 로컬 화면 기준이라 로컬 조종 중일 때만. 격자 연결 시 여기서 격자 함수 호출.
-	if (!IsLocallyControlled()) return;
+	// 시선 광선은 로컬 화면 기준이라 로컬 조종 중일 때만.
+	if (!IsLocallyControlled() || !Grid.IsValid()) return;
 
 	FRay Ray;
 	if (!GetViewRay(Ray)) return;
-	// 확인용. F8로 빠져나와 보면 보인다.
-	DrawDebugLine(GetWorld(), Ray.Origin, Ray.PointAt(1000.0), FColor::Green);
+
+	const FBuildingGridEdge* Edge = Grid->FindNearestEdge(Ray);
+	if (Edge == nullptr) return;
+
+	// 변 Transform은 액터 기준이라 격자 트랜스폼을 곱해 월드로. 변은 로컬 X축 방향으로 CellSize.
+	const FTransform World = Edge->Transform * Grid->GetActorTransform();
+	const FVector Half(ABuildingGrid::CellSize * 0.5f, 0.f, 0.f);
+	DrawDebugLine(GetWorld(), World.TransformPosition(-Half), World.TransformPosition(Half), FColor::Green);
 }
 
 bool AAsteriaPlayer::GetViewRay(FRay& OutRay) const
