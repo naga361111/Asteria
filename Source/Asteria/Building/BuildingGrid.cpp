@@ -90,6 +90,47 @@ void ABuildingGrid::CalculateEdges()
 	}
 }
 
+const FBuildingGridEdge* ABuildingGrid::FindNearestEdge(const FRay& Ray) const
+{
+	// 바닥 평면: 액터 위치를 지나고 액터 위쪽에 수직.
+	const FVector PlaneNormal = GetActorUpVector();
+	const double Denom = FVector::DotProduct(Ray.Direction, PlaneNormal);
+	if (FMath::IsNearlyZero(Denom))
+	{
+		return nullptr;
+	}
+	const double T = FVector::DotProduct(GetActorLocation() - Ray.Origin, PlaneNormal) / Denom;
+	if (T < 0.0)
+	{
+		return nullptr;
+	}
+
+	// 만난 점을 액터 기준 칸 좌표로.
+	const FVector Local = GetActorTransform().InverseTransformPosition(Ray.PointAt(T));
+	const double U = Local.X / CellSize;
+	const double V = Local.Y / CellSize;
+
+	// ponytail: CalculateEdges()와 같은 선형 탐색, 변이 수백 개를 넘으면 TMap 키 조회로.
+	auto FindEdge = [this](const FIntPoint& Vertex, int32 Axis)
+	{
+		return Edges.FindByPredicate([&Vertex, Axis](const FBuildingGridEdge& Edge)
+		{
+			return Edge.Vertex == Vertex && Edge.Axis == Axis;
+		});
+	};
+
+	// 가로 변 후보: 가장 가까운 가로 선 위의 칸. 세로 변도 마찬가지.
+	const int32 RoundU = FMath::RoundToInt32(U);
+	const int32 RoundV = FMath::RoundToInt32(V);
+	const FBuildingGridEdge* XEdge = FindEdge(FIntPoint(FMath::FloorToInt32(U), RoundV), 0);
+	const FBuildingGridEdge* YEdge = FindEdge(FIntPoint(RoundU, FMath::FloorToInt32(V)), 1);
+	if (XEdge == nullptr || YEdge == nullptr)
+	{
+		return XEdge ? XEdge : YEdge;
+	}
+	return FMath::Abs(V - RoundV) <= FMath::Abs(U - RoundU) ? XEdge : YEdge;
+}
+
 void ABuildingGrid::SpawnEdgeMeshes()
 {
 	// 메시 종류마다 인스턴스드 메시 컴포넌트 하나.
