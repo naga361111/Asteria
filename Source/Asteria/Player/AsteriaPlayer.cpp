@@ -67,6 +67,16 @@ AAsteriaPlayer::AAsteriaPlayer()
 
 	// 오버랩 이벤트를 실제로 발생시키려면 이게 켜져 있어야 한다.
 	BoxComp->SetGenerateOverlapEvents(true);
+
+	// 루트에 붙지만 위치는 매 프레임 변 위치로 직접 지정하므로 절대 트랜스폼.
+	PreviewComp = CreateDefaultSubobject<UStaticMeshComponent>(FName("Preview"));
+	PreviewComp->SetupAttachment(RootComponent);
+	PreviewComp->SetUsingAbsoluteLocation(true);
+	PreviewComp->SetUsingAbsoluteRotation(true);
+	PreviewComp->SetUsingAbsoluteScale(true);
+	PreviewComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	PreviewComp->SetCastShadow(false);
+	PreviewComp->SetVisibility(false);
 }
 
 void AAsteriaPlayer::OnDetectionBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
@@ -156,18 +166,39 @@ void AAsteriaPlayer::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	// 시선 광선은 로컬 화면 기준이라 로컬 조종 중일 때만.
-	if (!IsLocallyControlled() || !Grid.IsValid()) return;
+	if (!IsLocallyControlled()) return;
 
+	// 격자·광선·변 중 하나라도 없으면 null로 미리보기를 숨긴다.
 	FRay Ray;
-	if (!GetViewRay(Ray)) return;
-
-	const FBuildingGridEdge* Edge = Grid->FindNearestEdge(Ray);
+	const FBuildingGridEdge* Edge = Grid.IsValid() && GetViewRay(Ray) ? Grid->FindNearestEdge(Ray) : nullptr;
+	UpdatePreview(Edge);
 	if (Edge == nullptr) return;
 
 	// 변 Transform은 액터 기준이라 격자 트랜스폼을 곱해 월드로. 변은 로컬 X축 방향으로 CellSize.
 	const FTransform World = Edge->Transform * Grid->GetActorTransform();
 	const FVector Half(ABuildingGrid::CellSize * 0.5f, 0.f, 0.f);
 	DrawDebugLine(GetWorld(), World.TransformPosition(-Half), World.TransformPosition(Half), FColor::Green);
+}
+
+void AAsteriaPlayer::UpdatePreview(const FBuildingGridEdge* Edge)
+{
+	// 재질이 없으면 원래 재질 그대로 보이므로 띄우지 않는다.
+	if (Edge == nullptr || !PlaceableMeshes.IsValidIndex(SelectedMeshIndex) || PreviewMaterial == nullptr)
+	{
+		PreviewComp->SetVisibility(false);
+		return;
+	}
+
+	// 메시마다 슬롯 수가 다르므로 메시를 넣은 뒤 그 슬롯 수만큼 덮어쓴다.
+	PreviewComp->SetStaticMesh(PlaceableMeshes[SelectedMeshIndex]);
+	for (int32 Index = 0; Index < PreviewComp->GetNumMaterials(); ++Index)
+	{
+		PreviewComp->SetMaterial(Index, PreviewMaterial);
+	}
+
+	// SpawnEdgeMeshes()가 인스턴스를 놓는 위치와 같다.
+	PreviewComp->SetWorldTransform(Edge->Transform * Grid->GetActorTransform());
+	PreviewComp->SetVisibility(true);
 }
 
 bool AAsteriaPlayer::GetViewRay(FRay& OutRay) const

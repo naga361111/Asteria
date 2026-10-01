@@ -6,12 +6,15 @@
 #include "InputAction.h"
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "GameFramework/Character.h"
 #include "AsteriaPlayer.generated.h"
 
 struct FInputActionValue;
 class ABuildingGrid;
 class UStaticMesh;
+class UMaterialInterface;
+struct FBuildingGridEdge;
 
 UCLASS()
 class ASTERIA_API AAsteriaPlayer : public ACharacter
@@ -65,6 +68,17 @@ protected:
 
 	// 시선이 가리키는 변에 선택된 메시를 할당한다.
 	void Place(const FInputActionValue& Value);
+
+	// 잡은 메시를 설치될 변 위치에 보여 주는 미리보기. 월드 트랜스폼을 직접 지정한다.
+	UPROPERTY(EditDefaultsOnly, Category = "Placement")
+	TObjectPtr<UStaticMeshComponent> PreviewComp;
+
+	// 미리보기의 모든 재질 슬롯에 덮어쓸 반투명 재질.
+	UPROPERTY(EditDefaultsOnly, Category = "Placement")
+	TObjectPtr<UMaterialInterface> PreviewMaterial;
+
+	// Edge가 있고 선택된 메시가 유효하면 그 변 위치에 미리보기를 띄우고, 아니면 숨긴다. Tick()이 매 프레임 호출.
+	void UpdatePreview(const FBuildingGridEdge* Edge);
 
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UCameraComponent> CameraComp;
