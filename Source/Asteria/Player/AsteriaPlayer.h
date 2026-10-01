@@ -6,6 +6,7 @@
 #include "InputAction.h"
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/DecalComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/Character.h"
 #include "AsteriaPlayer.generated.h"
@@ -82,6 +83,10 @@ protected:
 	// 잡은 메시를 설치될 변 위치에 보여 주는 미리보기. 월드 트랜스폼을 직접 지정한다.
 	UPROPERTY(EditDefaultsOnly, Category = "Placement")
 	TObjectPtr<UStaticMeshComponent> PreviewComp;
+
+	// 미리보기 메시의 앞(+Y) 바닥에 화살표를 깔아 앞 방향을 보여주는 데칼. PreviewComp의 자식이라 위치·뒤집힘 회전을 따른다. 재질은 블루프린트에서 지정.
+	UPROPERTY(EditDefaultsOnly, Category = "Placement")
+	TObjectPtr<UDecalComponent> PreviewDecalComp;
 
 	// 미리보기의 모든 재질 슬롯에 덮어쓸 반투명 재질.
 	UPROPERTY(EditDefaultsOnly, Category = "Placement")

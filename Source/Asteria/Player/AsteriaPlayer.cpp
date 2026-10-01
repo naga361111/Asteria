@@ -77,6 +77,15 @@ AAsteriaPlayer::AAsteriaPlayer()
 	PreviewComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	PreviewComp->SetCastShadow(false);
 	PreviewComp->SetVisibility(false);
+
+	// 피벗(변 중점 바닥)에서 앞(+Y)으로 100 떨어진 바닥. DecalSize.X는 투영 깊이, Y·Z는 화살표 반경.
+	PreviewDecalComp = CreateDefaultSubobject<UDecalComponent>(FName("PreviewDecal"));
+	PreviewDecalComp->SetupAttachment(PreviewComp);
+	PreviewDecalComp->SetRelativeLocation(FVector(0.f, -100.f, 0.f));
+	// 피치 -90으로 로컬 X(투영)를 아래로 돌린다. yaw는 PIE에서 화살표가 앞을 가리키도록 맞춘 값.
+	PreviewDecalComp->SetRelativeRotation(FRotator(-90.f, 0.f, 0.f));
+	PreviewDecalComp->DecalSize = FVector(50.f, 50.f, 50.f);
+	PreviewDecalComp->SetVisibility(false);
 }
 
 void AAsteriaPlayer::OnDetectionBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
@@ -185,7 +194,8 @@ void AAsteriaPlayer::UpdatePreview(const FBuildingGridEdge* Edge)
 	// 재질이 없으면 원래 재질 그대로 보이므로 띄우지 않는다.
 	if (Edge == nullptr || !PlaceableMeshes.IsValidIndex(SelectedMeshIndex) || PreviewMaterial == nullptr)
 	{
-		PreviewComp->SetVisibility(false);
+		// 자식인 PreviewDecalComp도 함께 숨긴다.
+		PreviewComp->SetVisibility(false, true);
 		return;
 	}
 
@@ -198,7 +208,7 @@ void AAsteriaPlayer::UpdatePreview(const FBuildingGridEdge* Edge)
 
 	// SpawnEdgeMeshes()가 인스턴스를 놓는 위치와 같다.
 	PreviewComp->SetWorldTransform(ABuildingGrid::GetEdgeMeshTransform(*Edge, bPlaceFlipped) * Grid->GetActorTransform());
-	PreviewComp->SetVisibility(true);
+	PreviewComp->SetVisibility(true, true);
 }
 
 bool AAsteriaPlayer::GetViewRay(FRay& OutRay) const
