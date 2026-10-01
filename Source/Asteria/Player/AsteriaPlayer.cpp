@@ -197,7 +197,7 @@ void AAsteriaPlayer::UpdatePreview(const FBuildingGridEdge* Edge)
 	}
 
 	// SpawnEdgeMeshes()가 인스턴스를 놓는 위치와 같다.
-	PreviewComp->SetWorldTransform(Edge->Transform * Grid->GetActorTransform());
+	PreviewComp->SetWorldTransform(ABuildingGrid::GetEdgeMeshTransform(*Edge, bPlaceFlipped) * Grid->GetActorTransform());
 	PreviewComp->SetVisibility(true);
 }
 
@@ -267,7 +267,12 @@ void AAsteriaPlayer::Place(const FInputActionValue& Value)
 	const FBuildingGridEdge* Edge = Grid->FindNearestEdge(Ray);
 	if (Edge == nullptr) return;
 
-	Grid->SetEdgeMesh(Edge->Vertex, Edge->Axis, PlaceableMeshes[SelectedMeshIndex]);
+	Grid->SetEdgeMesh(Edge->Vertex, Edge->Axis, PlaceableMeshes[SelectedMeshIndex], bPlaceFlipped);
+}
+
+void AAsteriaPlayer::FlipPlacement(const FInputActionValue& Value)
+{
+	bPlaceFlipped = !bPlaceFlipped;
 }
 
 // Called to bind functionality to input
@@ -282,5 +287,6 @@ void AAsteriaPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		EIC->BindAction(InteractAction, ETriggerEvent::Started, this, &AAsteriaPlayer::Interact);
 		EIC->BindAction(SelectAction, ETriggerEvent::Triggered, this, &AAsteriaPlayer::SelectMesh);
 		EIC->BindAction(PlaceAction, ETriggerEvent::Started, this, &AAsteriaPlayer::Place);
+		EIC->BindAction(FlipAction, ETriggerEvent::Started, this, &AAsteriaPlayer::FlipPlacement);
 	}
 }

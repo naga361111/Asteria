@@ -64,7 +64,7 @@ void ABuildingGrid::CalculateEdges()
 		}
 	}
 
-	// 같은 (Vertex, Axis) 키의 기존 변에서 Mesh를 옮겨 온다.
+	// 같은 (Vertex, Axis) 키의 기존 변에서 Mesh와 bFlip을 옮겨 온다.
 	// ponytail: 변마다 선형 탐색(O(n²)), 변이 수백 개를 넘으면 TMap 키 조회로.
 	for (const FBuildingGridEdge& OldEdge : OldEdges)
 	{
@@ -80,6 +80,7 @@ void ABuildingGrid::CalculateEdges()
 		if (NewEdge)
 		{
 			NewEdge->Mesh = OldEdge.Mesh;
+			NewEdge->bFlip = OldEdge.bFlip;
 		}
 		else
 		{
@@ -131,7 +132,7 @@ const FBuildingGridEdge* ABuildingGrid::FindNearestEdge(const FRay& Ray) const
 	return FMath::Abs(V - RoundV) <= FMath::Abs(U - RoundU) ? XEdge : YEdge;
 }
 
-void ABuildingGrid::SetEdgeMesh(const FIntPoint& Vertex, int32 Axis, UStaticMesh* Mesh)
+void ABuildingGrid::SetEdgeMesh(const FIntPoint& Vertex, int32 Axis, UStaticMesh* Mesh, bool bFlip)
 {
 	// ponytail: CalculateEdges()와 같은 선형 탐색, 변이 수백 개를 넘으면 TMap 키 조회로.
 	FBuildingGridEdge* Edge = Edges.FindByPredicate([&Vertex, Axis](const FBuildingGridEdge& Candidate)
@@ -143,6 +144,7 @@ void ABuildingGrid::SetEdgeMesh(const FIntPoint& Vertex, int32 Axis, UStaticMesh
 		return;
 	}
 	Edge->Mesh = Mesh;
+	Edge->bFlip = bFlip;
 
 	// 이 격자의 인스턴스 메시 컴포넌트는 SpawnEdgeMeshes()가 만든 것뿐. 실행 중에는 엔진이 지워 주지 않으므로 직접 파괴.
 	TArray<UInstancedStaticMeshComponent*> MeshComponents;
@@ -153,6 +155,17 @@ void ABuildingGrid::SetEdgeMesh(const FIntPoint& Vertex, int32 Axis, UStaticMesh
 	}
 
 	SpawnEdgeMeshes();
+}
+
+FTransform ABuildingGrid::GetEdgeMeshTransform(const FBuildingGridEdge& Edge, bool bFlip)
+{
+	// 메시 피벗이 변 중점의 바닥이므로 회전만 더하면 같은 변에 반대 방향으로 놓인다.
+	FTransform Result = Edge.Transform;
+	if (bFlip)
+	{
+		Result.ConcatenateRotation(FRotator(0.f, 180.f, 0.f).Quaternion());
+	}
+	return Result;
 }
 
 void ABuildingGrid::SpawnEdgeMeshes()
@@ -177,8 +190,7 @@ void ABuildingGrid::SpawnEdgeMeshes()
 			MeshComponent->RegisterComponent();
 		}
 
-		// 메시 피벗이 가로·두께 중심의 바닥이므로 변 중점·회전을 그대로 쓴다.
-		MeshComponent->AddInstance(Edge.Transform);
+		MeshComponent->AddInstance(GetEdgeMeshTransform(Edge, Edge.bFlip));
 	}
 }
 

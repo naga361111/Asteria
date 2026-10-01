@@ -69,6 +69,16 @@ protected:
 	// 시선이 가리키는 변에 선택된 메시를 할당한다.
 	void Place(const FInputActionValue& Value);
 
+	// 설치 방향 뒤집기 액션.
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> FlipAction;
+
+	// 현재 설치 방향. true면 yaw 180도로 놓는다.
+	bool bPlaceFlipped = false;
+
+	// bPlaceFlipped를 뒤집는다.
+	void FlipPlacement(const FInputActionValue& Value);
+
 	// 잡은 메시를 설치될 변 위치에 보여 주는 미리보기. 월드 트랜스폼을 직접 지정한다.
 	UPROPERTY(EditDefaultsOnly, Category = "Placement")
 	TObjectPtr<UStaticMeshComponent> PreviewComp;

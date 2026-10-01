@@ -30,6 +30,10 @@ struct FBuildingGridEdge
 	// 이 변에 놓을 메시. null = 빈 변.
 	UPROPERTY(EditAnywhere, Category = "Grid")
 	TObjectPtr<UStaticMesh> Mesh;
+
+	// true면 이 변의 메시를 yaw 180도로 놓는다.
+	UPROPERTY(EditAnywhere, Category = "Grid")
+	bool bFlip = false;
 };
 
 // 레벨에 배치하는 격자. 액터 트랜스폼이 격자 원점이고, 격자의 각 변 위치를 계산한다.
@@ -57,8 +61,11 @@ public:
 	// 광선이 격자 바닥 평면과 만나는 점에서 가장 가까운 변. 평면과 안 만나거나 격자 밖이면 nullptr.
 	const FBuildingGridEdge* FindNearestEdge(const FRay& Ray) const;
 
-	// (Vertex, Axis) 키의 변에 Mesh를 할당하고 인스턴스 메시를 다시 만든다. 키에 해당하는 변이 없으면 무시.
-	void SetEdgeMesh(const FIntPoint& Vertex, int32 Axis, UStaticMesh* Mesh);
+	// (Vertex, Axis) 키의 변에 Mesh와 뒤집힘 여부를 할당하고 인스턴스 메시를 다시 만든다. 키에 해당하는 변이 없으면 무시.
+	void SetEdgeMesh(const FIntPoint& Vertex, int32 Axis, UStaticMesh* Mesh, bool bFlip);
+
+	// Edge에 메시를 놓을 액터 기준 트랜스폼. bFlip이면 변 Transform에 yaw 180도를 더한다(위치는 그대로).
+	static FTransform GetEdgeMeshTransform(const FBuildingGridEdge& Edge, bool bFlip);
 
 private:
 	void CalculateEdges();
