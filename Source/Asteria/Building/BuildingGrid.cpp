@@ -3,6 +3,7 @@
 
 #include "Building/BuildingGrid.h"
 
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/LineBatchComponent.h"
 #include "Components/SceneComponent.h"
 #include "Engine/StaticMesh.h"
@@ -27,6 +28,7 @@ void ABuildingGrid::OnConstruction(const FTransform& Transform)
 	Super::OnConstruction(Transform);
 
 	CalculateEdges();
+	SpawnEdgeMeshes();
 #if WITH_EDITOR
 	DrawEdges();
 #endif
@@ -85,6 +87,33 @@ void ABuildingGrid::CalculateEdges()
 			UE_LOG(LogTemp, Warning, TEXT("BuildingGrid: 변 (%d, %d) Axis %d 의 메시 %s 가 격자 축소로 버려짐"),
 				OldEdge.Vertex.X, OldEdge.Vertex.Y, OldEdge.Axis, *GetNameSafe(OldEdge.Mesh));
 		}
+	}
+}
+
+void ABuildingGrid::SpawnEdgeMeshes()
+{
+	// 메시 종류마다 인스턴스드 메시 컴포넌트 하나.
+	TMap<UStaticMesh*, UInstancedStaticMeshComponent*> MeshComponents;
+	for (const FBuildingGridEdge& Edge : Edges)
+	{
+		if (Edge.Mesh == nullptr)
+		{
+			continue;
+		}
+
+		UInstancedStaticMeshComponent*& MeshComponent = MeshComponents.FindOrAdd(Edge.Mesh);
+		if (MeshComponent == nullptr)
+		{
+			// 컨스트럭션 스크립트 생성으로 표시: 재실행 때 엔진이 지우고, 레벨에는 함께 저장됨.
+			MeshComponent = NewObject<UInstancedStaticMeshComponent>(this);
+			MeshComponent->CreationMethod = EComponentCreationMethod::UserConstructionScript;
+			MeshComponent->SetStaticMesh(Edge.Mesh);
+			MeshComponent->SetupAttachment(RootComponent);
+			MeshComponent->RegisterComponent();
+		}
+
+		// 메시 피벗이 가로·두께 중심의 바닥이므로 변 중점·회전을 그대로 쓴다.
+		MeshComponent->AddInstance(Edge.Transform);
 	}
 }
 

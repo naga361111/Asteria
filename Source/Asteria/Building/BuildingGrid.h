@@ -27,7 +27,7 @@ struct FBuildingGridEdge
 	UPROPERTY(VisibleAnywhere, Category = "Grid")
 	FTransform Transform;
 
-	// 이 변에 놓을 메시. null = 빈 변. 표시는 아직 안 함.
+	// 이 변에 놓을 메시. null = 빈 변.
 	UPROPERTY(EditAnywhere, Category = "Grid")
 	TObjectPtr<UStaticMesh> Mesh;
 };
@@ -56,6 +56,7 @@ public:
 
 private:
 	void CalculateEdges();
+	void SpawnEdgeMeshes();
 
 #if WITH_EDITORONLY_DATA
 	// 변을 그리는 에디터 전용 선. DrawEdges()가 채움.
