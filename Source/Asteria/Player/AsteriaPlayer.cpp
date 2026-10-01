@@ -3,6 +3,7 @@
 
 #include "Player/AsteriaPlayer.h"
 
+#include "DrawDebugHelpers.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
@@ -144,6 +145,32 @@ void AAsteriaPlayer::BeginPlay()
 void AAsteriaPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	// 시선 광선은 로컬 화면 기준이라 로컬 조종 중일 때만. 격자 연결 시 여기서 격자 함수 호출.
+	if (!IsLocallyControlled()) return;
+
+	FRay Ray;
+	if (!GetViewRay(Ray)) return;
+	// 확인용. F8로 빠져나와 보면 보인다.
+	DrawDebugLine(GetWorld(), Ray.Origin, Ray.PointAt(1000.0), FColor::Green);
+}
+
+bool AAsteriaPlayer::GetViewRay(FRay& OutRay) const
+{
+	const APlayerController* PC = GetController<APlayerController>();
+	if (PC == nullptr) return false;
+
+	// 조준점(WBP_PlayerHUD)은 화면 중앙이라 뷰포트 중앙 픽셀을 역투영한다.
+	int32 SizeX = 0;
+	int32 SizeY = 0;
+	PC->GetViewportSize(SizeX, SizeY);
+
+	FVector Origin;
+	FVector Direction;
+	if (!PC->DeprojectScreenPositionToWorld(SizeX * 0.5f, SizeY * 0.5f, Origin, Direction)) return false;
+
+	OutRay = FRay(Origin, Direction, true);
+	return true;
 }
 
 void AAsteriaPlayer::Move(const FInputActionValue& Value)

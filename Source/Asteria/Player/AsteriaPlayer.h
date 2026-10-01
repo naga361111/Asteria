@@ -84,6 +84,10 @@ public:
 
 	bool IsUIInputMode() const { return bUIInputMode; }
 
+	// 1인칭 시선 광선. 뷰포트 중앙 픽셀(조준점)을 월드로 역투영한다.
+	// 컨트롤러가 없거나 역투영 실패(서버, 초기화 전)면 false.
+	bool GetViewRay(FRay& OutRay) const;
+
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
