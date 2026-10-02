@@ -16,6 +16,7 @@ class ABuildingGrid;
 class UStaticMesh;
 class UMaterialInterface;
 class UTabMenuWidget;
+class UBuildingEdgeMeshData;
 struct FBuildingGridEdge;
 
 UCLASS()
@@ -57,12 +58,15 @@ protected:
 	// 휠 방향에 따라 SelectedMeshIndex를 한 칸 옮긴다. 끝을 넘으면 반대쪽 끝으로.
 	void SelectMesh(const FInputActionValue& Value);
 
-	// 잡을 수 있는 메시 목록.
+	// 잡을 수 있는 메시 목록 에셋. BP_Player 기본값에서 지정.
 	UPROPERTY(EditDefaultsOnly, Category = "Placement")
-	TArray<TObjectPtr<UStaticMesh>> PlaceableMeshes;
+	TObjectPtr<UBuildingEdgeMeshData> EdgeMeshData;
 
-	// 선택된 메시의 PlaceableMeshes 인덱스.
+	// 선택된 메시의 EdgeMeshData->EdgeMeshes 인덱스.
 	int32 SelectedMeshIndex = 0;
+
+	// EdgeMeshData가 있고 SelectedMeshIndex가 유효하면 그 메시, 아니면 nullptr. UpdatePreview()·Place()가 호출.
+	UStaticMesh* GetSelectedMesh() const;
 
 	// 배치 액션(클릭).
 	UPROPERTY(EditDefaultsOnly, Category = "Input")

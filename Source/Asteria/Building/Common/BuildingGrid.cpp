@@ -132,19 +132,22 @@ const FBuildingGridEdge* ABuildingGrid::FindNearestEdge(const FRay& Ray) const
 	return FMath::Abs(V - RoundV) <= FMath::Abs(U - RoundU) ? XEdge : YEdge;
 }
 
-void ABuildingGrid::SetEdgeMesh(const FIntPoint& Vertex, int32 Axis, UStaticMesh* Mesh, bool bFlip)
+void ABuildingGrid::SetEdgeMeshes(const TArray<FBuildingGridEdge>& NewEdges)
 {
-	// ponytail: CalculateEdges()와 같은 선형 탐색, 변이 수백 개를 넘으면 TMap 키 조회로.
-	FBuildingGridEdge* Edge = Edges.FindByPredicate([&Vertex, Axis](const FBuildingGridEdge& Candidate)
+	for (const FBuildingGridEdge& NewEdge : NewEdges)
 	{
-		return Candidate.Vertex == Vertex && Candidate.Axis == Axis;
-	});
-	if (Edge == nullptr)
-	{
-		return;
+		// ponytail: CalculateEdges()와 같은 선형 탐색, 변이 수백 개를 넘으면 TMap 키 조회로.
+		FBuildingGridEdge* Edge = Edges.FindByPredicate([&NewEdge](const FBuildingGridEdge& Candidate)
+		{
+			return Candidate.Vertex == NewEdge.Vertex && Candidate.Axis == NewEdge.Axis;
+		});
+		if (Edge == nullptr)
+		{
+			continue;
+		}
+		Edge->Mesh = NewEdge.Mesh;
+		Edge->bFlip = NewEdge.bFlip;
 	}
-	Edge->Mesh = Mesh;
-	Edge->bFlip = bFlip;
 
 	// 이 격자의 인스턴스 메시 컴포넌트는 SpawnEdgeMeshes()가 만든 것뿐. 실행 중에는 엔진이 지워 주지 않으므로 직접 파괴.
 	TArray<UInstancedStaticMeshComponent*> MeshComponents;

@@ -9,6 +9,7 @@
 #include "EngineUtils.h"
 #include "InputActionValue.h"
 #include "Building/Common/BuildingGrid.h"
+#include "Building/Common/BuildingEdgeMeshData.h"
 #include "Interaction/Interactable.h"
 #include "GameState/AsteriaGameState.h"
 #include "GameState/Components/CounterService.h"
@@ -193,7 +194,8 @@ void AAsteriaPlayer::Tick(float DeltaTime)
 void AAsteriaPlayer::UpdatePreview(const FBuildingGridEdge* Edge, const FVector& ViewOrigin)
 {
 	// 재질이 없으면 원래 재질 그대로 보이므로 띄우지 않는다.
-	if (Edge == nullptr || !PlaceableMeshes.IsValidIndex(SelectedMeshIndex) || PreviewMaterial == nullptr)
+	UStaticMesh* SelectedMesh = GetSelectedMesh();
+	if (Edge == nullptr || SelectedMesh == nullptr || PreviewMaterial == nullptr)
 	{
 		// 자식인 PreviewDecalComp도 함께 숨긴다.
 		PreviewComp->SetVisibility(false, true);
@@ -201,7 +203,7 @@ void AAsteriaPlayer::UpdatePreview(const FBuildingGridEdge* Edge, const FVector&
 	}
 
 	// 메시마다 슬롯 수가 다르므로 메시를 넣은 뒤 그 슬롯 수만큼 덮어쓴다.
-	PreviewComp->SetStaticMesh(PlaceableMeshes[SelectedMeshIndex]);
+	PreviewComp->SetStaticMesh(SelectedMesh);
 	for (int32 Index = 0; Index < PreviewComp->GetNumMaterials(); ++Index)
 	{
 		PreviewComp->SetMaterial(Index, PreviewMaterial);
@@ -269,7 +271,7 @@ void AAsteriaPlayer::Interact(const FInputActionValue& Value)
 
 void AAsteriaPlayer::SelectMesh(const FInputActionValue& Value)
 {
-	const int32 Num = PlaceableMeshes.Num();
+	const int32 Num = EdgeMeshData ? EdgeMeshData->EdgeMeshes.Num() : 0;
 	if (Num == 0) return;
 
 	const float Axis = Value.Get<float>();
@@ -279,9 +281,16 @@ void AAsteriaPlayer::SelectMesh(const FInputActionValue& Value)
 	SelectedMeshIndex = (SelectedMeshIndex + Step + Num) % Num;
 }
 
+UStaticMesh* AAsteriaPlayer::GetSelectedMesh() const
+{
+	if (EdgeMeshData == nullptr || !EdgeMeshData->EdgeMeshes.IsValidIndex(SelectedMeshIndex)) return nullptr;
+	return EdgeMeshData->EdgeMeshes[SelectedMeshIndex];
+}
+
 void AAsteriaPlayer::Place(const FInputActionValue& Value)
 {
-	if (!Grid.IsValid() || !PlaceableMeshes.IsValidIndex(SelectedMeshIndex)) return;
+	UStaticMesh* SelectedMesh = GetSelectedMesh();
+	if (!Grid.IsValid() || SelectedMesh == nullptr) return;
 
 	FRay Ray;
 	if (!GetViewRay(Ray)) return;
@@ -289,7 +298,10 @@ void AAsteriaPlayer::Place(const FInputActionValue& Value)
 	const FBuildingGridEdge* Edge = Grid->FindNearestEdge(Ray);
 	if (Edge == nullptr) return;
 
-	Grid->SetEdgeMesh(Edge->Vertex, Edge->Axis, PlaceableMeshes[SelectedMeshIndex], ShouldFlip(*Edge, Ray.Origin));
+	FBuildingGridEdge NewEdge = *Edge;
+	NewEdge.Mesh = SelectedMesh;
+	NewEdge.bFlip = ShouldFlip(*Edge, Ray.Origin);
+	Grid->SetEdgeMeshes({ NewEdge });
 }
 
 void AAsteriaPlayer::FlipPlacement(const FInputActionValue& Value)
