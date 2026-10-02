@@ -6,6 +6,14 @@
 #include "Rendering/DrawElements.h"
 #include "Styling/CoreStyle.h"
 #include "Building/Common/BuildingGrid.h"
+#include "Building/Common/BuildingEdgeMeshData.h"
+
+void UBuildingGridWidget::SetMeshChoices(UBuildingEdgeMeshData* InMeshData, int32 InOutlineMeshIndex, int32 InInteriorMeshIndex)
+{
+	MeshData = InMeshData;
+	OutlineMeshIndex = InOutlineMeshIndex;
+	InteriorMeshIndex = InInteriorMeshIndex;
+}
 
 void UBuildingGridWidget::NativeConstruct()
 {
@@ -23,17 +31,20 @@ void UBuildingGridWidget::NativeConstruct()
 		UE_LOG(LogTemp, Warning, TEXT("UBuildingGridWidget: no ABuildingGrid in level"));
 	}
 
-	// 탭 메뉴를 열 때마다 진행 중인 선택을 초기화. 칸은 격자(FloorCells)에서 읽음.
+	// 탭 메뉴를 열 때마다 진행 중인 획을 초기화. 벽 변은 격자(Edges 중 Mesh 있는 변)에서 읽음.
+	WallEdges.Reset();
 	if (const ABuildingGrid* GridActor = Grid.Get())
 	{
-		SelectedCells = GridActor->FloorCells;
+		for (const FBuildingGridEdge& Edge : GridActor->Edges)
+		{
+			if (Edge.Mesh != nullptr)
+			{
+				WallEdges.Add(Edge);
+			}
+		}
 	}
-	else
-	{
-		SelectedCells.Reset();
-	}
-	SelectionAnchor.Reset();
-	HoveredCell.Reset();
+	DragStart.Reset();
+	HoveredPos.Reset();
 
 	// 기본값 SelfHitTestInvisible은 마우스 이벤트를 못 받는다.
 	SetVisibility(ESlateVisibility::Visible);
@@ -51,7 +62,7 @@ float UBuildingGridWidget::GetCellSize(const FVector2D& LocalSize) const
 	return FMath::Min(LocalSize.X / Size.X, LocalSize.Y / Size.Y);
 }
 
-TOptional<FIntPoint> UBuildingGridWidget::GetCellAt(const FGeometry& Geometry, const FVector2D& ScreenPos) const
+TOptional<FVector2D> UBuildingGridWidget::GetGridPos(const FGeometry& Geometry, const FVector2D& ScreenPos) const
 {
 	const float Cell = GetCellSize(Geometry.GetLocalSize());
 	if (Cell <= 0.f)
@@ -59,41 +70,101 @@ TOptional<FIntPoint> UBuildingGridWidget::GetCellAt(const FGeometry& Geometry, c
 		return {};
 	}
 
-	const FVector2D Local = Geometry.AbsoluteToLocal(ScreenPos);
-	const FIntPoint CellPos(FMath::FloorToInt32(Local.X / Cell), FMath::FloorToInt32(Local.Y / Cell));
-	const FIntPoint Size = Grid->GridSize;
-	if (CellPos.X < 0 || CellPos.X >= Size.X || CellPos.Y < 0 || CellPos.Y >= Size.Y)
-	{
-		return {};
-	}
-	return CellPos;
+	return FVector2D(Geometry.AbsoluteToLocal(ScreenPos)) / Cell;
 }
 
-bool UBuildingGridWidget::OverlapsSelectedCells(const FIntRect& Rect) const
+TArray<FBuildingGridEdge> UBuildingGridWidget::GetStrokeEdges(const FVector2D& Start, const FVector2D& End) const
 {
-	for (int32 Y = Rect.Min.Y; Y < Rect.Max.Y; ++Y)
+	TArray<FBuildingGridEdge> Stroke;
+	const ABuildingGrid* GridActor = Grid.Get();
+	if (!GridActor)
 	{
-		for (int32 X = Rect.Min.X; X < Rect.Max.X; ++X)
+		return Stroke;
+	}
+
+	// 가장 가까운 꼭짓점으로 스냅.
+	const FIntPoint Size = GridActor->GridSize;
+	auto Snap = [&Size](const FVector2D& Pos)
+	{
+		return FIntPoint(FMath::Clamp(FMath::RoundToInt32(Pos.X), 0, Size.X), FMath::Clamp(FMath::RoundToInt32(Pos.Y), 0, Size.Y));
+	};
+	const FIntPoint S = Snap(Start);
+	const FIntPoint E = Snap(End);
+
+	auto AddEdge = [&Stroke](const FIntPoint& Vertex, int32 Axis)
+	{
+		FBuildingGridEdge& Edge = Stroke.AddDefaulted_GetRef();
+		Edge.Vertex = Vertex;
+		Edge.Axis = Axis;
+	};
+
+	if (S == E)
+	{
+		// 클릭: 가장 가까운 변 하나.
+		if (const FBuildingGridEdge* Nearest = GridActor->FindNearestEdgeAt(End))
 		{
-			if (SelectedCells.Contains(FIntPoint(X, Y)))
-			{
-				return true;
-			}
+			AddEdge(Nearest->Vertex, Nearest->Axis);
+		}
+		return Stroke;
+	}
+
+	// 드래그: 시작 꼭짓점에서 우세 축으로 끝 꼭짓점까지 직선.
+	if (FMath::Abs(E.X - S.X) >= FMath::Abs(E.Y - S.Y))
+	{
+		for (int32 X = FMath::Min(S.X, E.X); X < FMath::Max(S.X, E.X); ++X)
+		{
+			AddEdge(FIntPoint(X, S.Y), 0);
 		}
 	}
-	return false;
+	else
+	{
+		for (int32 Y = FMath::Min(S.Y, E.Y); Y < FMath::Max(S.Y, E.Y); ++Y)
+		{
+			AddEdge(FIntPoint(S.X, Y), 1);
+		}
+	}
+	return Stroke;
+}
+
+UStaticMesh* UBuildingGridWidget::GetComboMesh(EBuildingEdgeKind Kind) const
+{
+	if (MeshData == nullptr)
+	{
+		return nullptr;
+	}
+
+	// 닫히지 않은 변은 아직 종류가 없으므로 외곽선 콤보.
+	const bool bInterior = Kind == EBuildingEdgeKind::Interior;
+	const TArray<FBuildingEdgeMeshEntry>& List = bInterior ? MeshData->InteriorMeshes : MeshData->OutlineMeshes;
+	const int32 Index = bInterior ? InteriorMeshIndex : OutlineMeshIndex;
+	return List.IsValidIndex(Index) ? List[Index].Mesh.Get() : nullptr;
+}
+
+const FBuildingEdgeMeshEntry* UBuildingGridWidget::FindMeshEntry(const UStaticMesh* Mesh) const
+{
+	if (MeshData == nullptr || Mesh == nullptr)
+	{
+		return nullptr;
+	}
+
+	auto IsMesh = [Mesh](const FBuildingEdgeMeshEntry& Entry)
+	{
+		return Entry.Mesh == Mesh;
+	};
+	const FBuildingEdgeMeshEntry* Entry = MeshData->OutlineMeshes.FindByPredicate(IsMesh);
+	return Entry ? Entry : MeshData->InteriorMeshes.FindByPredicate(IsMesh);
 }
 
 FReply UBuildingGridWidget::NativeOnMouseMove(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	HoveredCell = GetCellAt(InGeometry, InMouseEvent.GetScreenSpacePosition());
+	HoveredPos = GetGridPos(InGeometry, InMouseEvent.GetScreenSpacePosition());
 	return Super::NativeOnMouseMove(InGeometry, InMouseEvent);
 }
 
 void UBuildingGridWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
 {
 	Super::NativeOnMouseLeave(InMouseEvent);
-	HoveredCell.Reset();
+	HoveredPos.Reset();
 }
 
 FReply UBuildingGridWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
@@ -105,54 +176,109 @@ FReply UBuildingGridWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry,
 		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
 	}
 
-	const TOptional<FIntPoint> CellPos = GetCellAt(InGeometry, InMouseEvent.GetScreenSpacePosition());
-	if (!CellPos.IsSet())
+	const TOptional<FVector2D> Pos = GetGridPos(InGeometry, InMouseEvent.GetScreenSpacePosition());
+	if (!Pos.IsSet())
 	{
 		return FReply::Unhandled();
 	}
 
 	const bool bErase = Button == EKeys::RightMouseButton;
-	if (!SelectionAnchor.IsSet())
+	if (!DragStart.IsSet())
 	{
-		// 첫 모서리. 왼쪽 = 추가, 오른쪽 = 제거.
-		SelectionAnchor = CellPos;
-		bEraseSelection = bErase;
-		return FReply::Handled();
+		// 획 시작. 왼쪽 = 그리기, 오른쪽 = 지우기. 위젯 밖에서 놓아도 받도록 캡처.
+		DragStart = Pos;
+		bErasing = bErase;
+		return FReply::Handled().CaptureMouse(TakeWidget());
 	}
 
-	if (bErase != bEraseSelection)
+	if (bErase != bErasing)
 	{
-		// 첫 클릭과 다른 버튼이면 취소.
-		SelectionAnchor.Reset();
-		return FReply::Handled();
+		// 획 중 다른 버튼이면 취소.
+		DragStart.Reset();
+		return FReply::Handled().ReleaseMouseCapture();
+	}
+	return FReply::Handled();
+}
+
+FReply UBuildingGridWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	const FKey Button = InMouseEvent.GetEffectingButton();
+	const bool bErase = Button == EKeys::RightMouseButton;
+	if (!DragStart.IsSet() || (Button != EKeys::LeftMouseButton && Button != EKeys::RightMouseButton) || bErase != bErasing)
+	{
+		return Super::NativeOnMouseButtonUp(InGeometry, InMouseEvent);
 	}
 
-	// 반대 모서리로 확정.
-	const FIntPoint A = SelectionAnchor.GetValue();
-	const FIntPoint B = CellPos.GetValue();
-	const FIntRect Rect(A.ComponentMin(B), A.ComponentMax(B) + FIntPoint(1, 1));
-	if (!bEraseSelection && OverlapsSelectedCells(Rect))
+	const TOptional<FVector2D> Pos = GetGridPos(InGeometry, InMouseEvent.GetScreenSpacePosition());
+	if (!Pos.IsSet())
 	{
-		// 추가가 기존 칸과 겹치면 무시하고 첫 모서리 유지.
-		return FReply::Handled();
+		DragStart.Reset();
+		return FReply::Handled().ReleaseMouseCapture();
 	}
 
-	for (int32 Y = Rect.Min.Y; Y < Rect.Max.Y; ++Y)
+	const TArray<FBuildingGridEdge> Stroke = GetStrokeEdges(DragStart.GetValue(), Pos.GetValue());
+
+	// ponytail: ABuildingGrid::SetEdgeMeshes()와 같은 선형 탐색, 변이 수백 개를 넘으면 TMap 키 조회로.
+	auto FindWallEdge = [this](const FBuildingGridEdge& Key)
 	{
-		for (int32 X = Rect.Min.X; X < Rect.Max.X; ++X)
+		return WallEdges.FindByPredicate([&Key](const FBuildingGridEdge& Candidate)
 		{
-			if (bEraseSelection)
+			return Candidate.Vertex == Key.Vertex && Candidate.Axis == Key.Axis;
+		});
+	};
+
+	if (bErasing)
+	{
+		WallEdges.RemoveAll([&Stroke](const FBuildingGridEdge& Edge)
+		{
+			return Stroke.ContainsByPredicate([&Edge](const FBuildingGridEdge& Key)
 			{
-				SelectedCells.Remove(FIntPoint(X, Y));
-			}
-			else
+				return Key.Vertex == Edge.Vertex && Key.Axis == Edge.Axis;
+			});
+		});
+	}
+	else if (const ABuildingGrid* GridActor = Grid.Get())
+	{
+		for (const FBuildingGridEdge& Key : Stroke)
+		{
+			if (FindWallEdge(Key) == nullptr)
 			{
-				SelectedCells.Add(FIntPoint(X, Y));
+				WallEdges.Add(Key);
 			}
 		}
+
+		// 획의 변에 그 순간의 종류로 콤보 메시를 기록해 확정한다. 이미 있던 변이어도 덮어쓴다(변별 메시 지정).
+		const TSet<FIntPoint> Floor = ABuildingGrid::GetFloorCells(WallEdges, GridActor->GridSize);
+		for (const FBuildingGridEdge& Key : Stroke)
+		{
+			FBuildingGridEdge* Edge = FindWallEdge(Key);
+			bool bUnusedFlip = false;
+			if (UStaticMesh* ComboMesh = GetComboMesh(ABuildingGrid::GetEdgeKind(*Edge, Floor, bUnusedFlip)))
+			{
+				Edge->Mesh = ComboMesh;
+			}
+		}
+
+		// 콤보 메시가 없어 기록하지 못한 새 변, 외곽선 메시를 가진 채 내부가 된 변(옆에 붙인 사각형과 맞닿은 변)은 지운다.
+		// 내부 변을 지워도 바닥 칸은 그대로라 Floor를 다시 구하지 않는다.
+		WallEdges.RemoveAll([this, &Floor](const FBuildingGridEdge& Edge)
+		{
+			if (Edge.Mesh == nullptr)
+			{
+				return true;
+			}
+			bool bUnusedFlip = false;
+			return ABuildingGrid::GetEdgeKind(Edge, Floor, bUnusedFlip) == EBuildingEdgeKind::Interior
+				&& MeshData != nullptr
+				&& MeshData->OutlineMeshes.ContainsByPredicate([&Edge](const FBuildingEdgeMeshEntry& Entry)
+				{
+					return Entry.Mesh == Edge.Mesh;
+				});
+		});
 	}
-	SelectionAnchor.Reset();
-	return FReply::Handled();
+
+	DragStart.Reset();
+	return FReply::Handled().ReleaseMouseCapture();
 }
 
 int32 UBuildingGridWidget::NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
@@ -180,37 +306,11 @@ int32 UBuildingGridWidget::NativePaint(const FPaintArgs& Args, const FGeometry& 
 		FSlateDrawElement::MakeBox(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(BoxSize, FSlateLayoutTransform(TopLeft)), Brush, ESlateDrawEffect::None, Color);
 	};
 
-	FLinearColor PreviewColor = SelectionColor;
-	PreviewColor.A *= 0.5f;
-
-	// 선택 칸들.
-	for (const FIntPoint& Selected : SelectedCells)
+	// 벽으로 둘러싸인 바닥 칸들.
+	const TSet<FIntPoint> Floor = ABuildingGrid::GetFloorCells(WallEdges, Size);
+	for (const FIntPoint& FloorCell : Floor)
 	{
-		DrawRect(FIntRect(Selected, Selected + FIntPoint(1, 1)), SelectionColor);
-	}
-
-	if (HoveredCell.IsSet())
-	{
-		const FIntPoint H = HoveredCell.GetValue();
-		if (SelectionAnchor.IsSet())
-		{
-			// 미리보기 사각형. 제거면 EraseColor, 추가가 기존 칸과 겹치면 빨강.
-			const FIntPoint A = SelectionAnchor.GetValue();
-			const FIntRect Preview(A.ComponentMin(H), A.ComponentMax(H) + FIntPoint(1, 1));
-			if (bEraseSelection)
-			{
-				DrawRect(Preview, EraseColor);
-			}
-			else
-			{
-				DrawRect(Preview, OverlapsSelectedCells(Preview) ? FLinearColor(1.f, 0.f, 0.f, PreviewColor.A) : PreviewColor);
-			}
-		}
-		else
-		{
-			// 가리킨 칸.
-			DrawRect(FIntRect(H, H + FIntPoint(1, 1)), PreviewColor);
-		}
+		DrawRect(FIntRect(FloorCell, FloorCell + FIntPoint(1, 1)), FloorColor);
 	}
 
 	TArray<FVector2D> Points;
@@ -232,25 +332,51 @@ int32 UBuildingGridWidget::NativePaint(const FPaintArgs& Args, const FGeometry& 
 		FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 2, AllottedGeometry.ToPaintGeometry(), Points, ESlateDrawEffect::None, LineColor);
 	}
 
-	// 외곽선. 변은 Vertex에서 Axis 방향으로 한 칸.
-	for (const FBuildingGridEdge& Edge : ABuildingGrid::GetOutlineEdges(SelectedCells, Size))
+	// 변은 Vertex에서 Axis 방향으로 한 칸.
+	auto DrawEdge = [&](const FBuildingGridEdge& Edge, const FLinearColor& Color, int32 Layer)
 	{
 		const FIntPoint End = Edge.Vertex + (Edge.Axis == 0 ? FIntPoint(1, 0) : FIntPoint(0, 1));
 		Points[0] = FVector2D(Cell * Edge.Vertex.X, Cell * Edge.Vertex.Y);
 		Points[1] = FVector2D(Cell * End.X, Cell * End.Y);
-		FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 3, AllottedGeometry.ToPaintGeometry(), Points, ESlateDrawEffect::None, OutlineColor, true, 3.f);
+		FSlateDrawElement::MakeLines(OutDrawElements, Layer, AllottedGeometry.ToPaintGeometry(), Points, ESlateDrawEffect::None, Color, true, 3.f);
+	};
+
+	// 벽 변. 기록된 메시의 색, 목록에 없는 메시면 OpenColor. 닫히지 않은 변은 흐리게(반영 불가).
+	for (const FBuildingGridEdge& Edge : WallEdges)
+	{
+		const FBuildingEdgeMeshEntry* Entry = FindMeshEntry(Edge.Mesh);
+		FLinearColor Color = Entry ? Entry->Color : OpenColor;
+		bool bUnusedFlip = false;
+		if (ABuildingGrid::GetEdgeKind(Edge, Floor, bUnusedFlip) == EBuildingEdgeKind::Open)
+		{
+			Color.A *= 0.4f;
+		}
+		DrawEdge(Edge, Color, LayerId + 3);
 	}
 
-	return LayerId + 3;
+	// 획 미리보기. 획이 없으면 가리킨 변.
+	if (HoveredPos.IsSet())
+	{
+		const FVector2D Hovered = HoveredPos.GetValue();
+		const FVector2D Start = DragStart.IsSet() ? DragStart.GetValue() : Hovered;
+		const FLinearColor& StrokeColor = DragStart.IsSet() && bErasing ? EraseColor : PreviewColor;
+		for (const FBuildingGridEdge& Edge : GetStrokeEdges(Start, Hovered))
+		{
+			DrawEdge(Edge, StrokeColor, LayerId + 4);
+		}
+	}
+
+	return LayerId + 4;
 }
 
-void UBuildingGridWidget::BuildOutlineWalls(UStaticMesh* Mesh)
+void UBuildingGridWidget::BuildWalls()
 {
 	ABuildingGrid* GridActor = Grid.Get();
-	if (!GridActor || !Mesh)
+	if (!GridActor)
 	{
 		return;
 	}
 
-	GridActor->ApplyFloorCells(SelectedCells, Mesh);
+	// 메시는 그린 시점에 확정돼 있다. 검증(Open 변·메시 null)은 ApplyWallEdges()가 한다.
+	GridActor->ApplyWallEdges(WallEdges);
 }
