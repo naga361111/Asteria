@@ -1,14 +1,4 @@
 - [Project direction](project-direction-guild-sim.md) — 코옵 모험가 길드 홀 시뮬(A형)로 스코프 축소 확정, 던전 추상·회색박스 코어부터
 - [Debugging when code seems fine](debugging-when-seems-no-error-in-code.md) — 코드가 맞는데 동작이 이상하면 핫 리로드 더미부터 의심, 재시작+풀 리빌드로 재현 확인
-- [Hearthvale occlusion mask off](hearthvale-occlusion-mask.md) — 1인칭용으로 Hearthvale 재질 투명화 스위치를 꺼 둠, 에셋 폴더 git 미추적이라 재설치 시 재적용
-- [Unreal MCP set transform resets](unreal-mcp-set-transform-resets.md) — set_actor_transform은 빠진 회전·크기·위치를 초기화함, 항상 세 항목 모두 넘기기
-- [Slate screenshot on minimized editor crashes](unreal-slate-screenshot-minimized-crash.md) — 에디터 최소화 중 UI 스크린샷 금지(복원 시 크래시), 창 복원·이동은 직접 하지 말고 사용자에게 요청
-- [Editor Python via console](unreal-editor-python-console.md) — 콘솔창에 `py "스크립트"` 입력으로 전체 에디터 Python 실행, 랜드스케이프 생성 폼 설정은 /Engine/Transient.UISettings
-- [Hearthvale module sizes](hearthvale-module-sizes.md) — 건축 부품 실측: 300 격자, 벽 피벗(+X, 두께 -Y), 층 400+300, 계단 150+150+100
-- [Blender roof pipeline](blender-roof-pipeline.md) — Blender 5.2 스크립트 생성→명령줄 임포트, 좌표(Y 반전)·UV 밀도·너와 재질 A_Dark, 캡처 노출 요령
-- [Visible meshes assets only](visible-meshes-assets-only.md) — 보이는 곳엔 엔진 기본 도형 금지, 에셋만. 외관(밖·위)도 항상 확인
-- [PCG MCP regenerate cache](pcg-mcp-regenerate-cache.md) — 노드 설정 변경은 실행만으론 반영 안 됨, MCP는 엔진 PCG 노드만 추가 가능(C++ 노드는 명령줄 파이썬), 강제 종료 시 복구 모달, Git Bash /Game 경로 변환
-- [PCG Filter By Index crash](pcg-filter-by-index-empty-crash.md) — 빈 데이터/음수 인덱스로 에디터 크래시, Merge Points+Branch로 막고 실행 전 저장
-- [EDIT COPY via Python crashes](unreal-edit-copy-python-crash.md) — execute_console_command(None,"EDIT COPY") 에디터 크래시, 속성 비교는 직접 읽기로
-- [Spec approval: show then ask in text](spec-show-before-askuserquestion.md) — AskUserQuestion 직전 텍스트가 안 보임, 스펙 출력 후 텍스트로 승인 묻고 턴 종료
 - [Unreal command-line Python](unreal-commandline-python.md) — MCP 끊기면 UnrealEditor-Cmd -run=pythonscript로 에셋 생성(에디터 실행 중 OK), 출력은 log_warning
+- [No automation tests unasked](no-automation-tests-unasked.md) — 설계·스펙에 자동화 테스트 임의 추가 금지, 요청 시에만
