@@ -23,10 +23,17 @@ void UBuildingGridWidget::NativeConstruct()
 		UE_LOG(LogTemp, Warning, TEXT("UBuildingGridWidget: no ABuildingGrid in level"));
 	}
 
-	// 탭 메뉴를 열 때마다 선택 초기화.
+	// 탭 메뉴를 열 때마다 진행 중인 선택을 초기화. 칸은 격자(FloorCells)에서 읽음.
+	if (const ABuildingGrid* GridActor = Grid.Get())
+	{
+		SelectedCells = GridActor->FloorCells;
+	}
+	else
+	{
+		SelectedCells.Reset();
+	}
 	SelectionAnchor.Reset();
 	HoveredCell.Reset();
-	SelectedRects.Reset();
 
 	// 기본값 SelfHitTestInvisible은 마우스 이벤트를 못 받는다.
 	SetVisibility(ESlateVisibility::Visible);
@@ -62,27 +69,16 @@ TOptional<FIntPoint> UBuildingGridWidget::GetCellAt(const FGeometry& Geometry, c
 	return CellPos;
 }
 
-bool UBuildingGridWidget::OverlapsSelectedRects(const FIntRect& Rect) const
+bool UBuildingGridWidget::OverlapsSelectedCells(const FIntRect& Rect) const
 {
-	// Intersect는 반열린 사각형 기준이라 변만 맞닿으면 false.
-	for (const FIntRect& Selected : SelectedRects)
+	for (int32 Y = Rect.Min.Y; Y < Rect.Max.Y; ++Y)
 	{
-		if (Selected.Intersect(Rect))
+		for (int32 X = Rect.Min.X; X < Rect.Max.X; ++X)
 		{
-			return true;
-		}
-	}
-	return false;
-}
-
-bool UBuildingGridWidget::IsCellSelected(const FIntPoint& Cell) const
-{
-	// Contains는 Min 포함·Max 미포함.
-	for (const FIntRect& Selected : SelectedRects)
-	{
-		if (Selected.Contains(Cell))
-		{
-			return true;
+			if (SelectedCells.Contains(FIntPoint(X, Y)))
+			{
+				return true;
+			}
 		}
 	}
 	return false;
@@ -103,43 +99,60 @@ void UBuildingGridWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
 FReply UBuildingGridWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	// Handled를 반환해야 GameAndUI 입력 모드에서 클릭이 게임 입력으로 넘어가지 않는다.
-	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+	const FKey Button = InMouseEvent.GetEffectingButton();
+	if (Button != EKeys::LeftMouseButton && Button != EKeys::RightMouseButton)
 	{
-		const TOptional<FIntPoint> CellPos = GetCellAt(InGeometry, InMouseEvent.GetScreenSpacePosition());
-		if (!CellPos.IsSet())
-		{
-			return FReply::Unhandled();
-		}
+		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+	}
 
-		if (!SelectionAnchor.IsSet())
-		{
-			// 첫 모서리.
-			SelectionAnchor = CellPos;
-		}
-		else
-		{
-			// 반대 모서리로 확정. 기존 사각형과 겹치면 무시하고 첫 모서리 유지.
-			const FIntPoint A = SelectionAnchor.GetValue();
-			const FIntPoint B = CellPos.GetValue();
-			const FIntRect Rect(A.ComponentMin(B), A.ComponentMax(B) + FIntPoint(1, 1));
-			if (OverlapsSelectedRects(Rect))
-			{
-				return FReply::Handled();
-			}
-			SelectedRects.Add(Rect);
-			SelectionAnchor.Reset();
-		}
+	const TOptional<FIntPoint> CellPos = GetCellAt(InGeometry, InMouseEvent.GetScreenSpacePosition());
+	if (!CellPos.IsSet())
+	{
+		return FReply::Unhandled();
+	}
+
+	const bool bErase = Button == EKeys::RightMouseButton;
+	if (!SelectionAnchor.IsSet())
+	{
+		// 첫 모서리. 왼쪽 = 추가, 오른쪽 = 제거.
+		SelectionAnchor = CellPos;
+		bEraseSelection = bErase;
 		return FReply::Handled();
 	}
 
-	if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
+	if (bErase != bEraseSelection)
 	{
-		// 선택 취소.
+		// 첫 클릭과 다른 버튼이면 취소.
 		SelectionAnchor.Reset();
 		return FReply::Handled();
 	}
 
-	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+	// 반대 모서리로 확정.
+	const FIntPoint A = SelectionAnchor.GetValue();
+	const FIntPoint B = CellPos.GetValue();
+	const FIntRect Rect(A.ComponentMin(B), A.ComponentMax(B) + FIntPoint(1, 1));
+	if (!bEraseSelection && OverlapsSelectedCells(Rect))
+	{
+		// 추가가 기존 칸과 겹치면 무시하고 첫 모서리 유지.
+		return FReply::Handled();
+	}
+
+	for (int32 Y = Rect.Min.Y; Y < Rect.Max.Y; ++Y)
+	{
+		for (int32 X = Rect.Min.X; X < Rect.Max.X; ++X)
+		{
+			if (bEraseSelection)
+			{
+				SelectedCells.Remove(FIntPoint(X, Y));
+			}
+			else
+			{
+				SelectedCells.Add(FIntPoint(X, Y));
+			}
+		}
+	}
+	SelectionAnchor.Reset();
+	return FReply::Handled();
 }
 
 int32 UBuildingGridWidget::NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
@@ -170,10 +183,10 @@ int32 UBuildingGridWidget::NativePaint(const FPaintArgs& Args, const FGeometry& 
 	FLinearColor PreviewColor = SelectionColor;
 	PreviewColor.A *= 0.5f;
 
-	// 확정 사각형들.
-	for (const FIntRect& Selected : SelectedRects)
+	// 선택 칸들.
+	for (const FIntPoint& Selected : SelectedCells)
 	{
-		DrawRect(Selected, SelectionColor);
+		DrawRect(FIntRect(Selected, Selected + FIntPoint(1, 1)), SelectionColor);
 	}
 
 	if (HoveredCell.IsSet())
@@ -181,10 +194,17 @@ int32 UBuildingGridWidget::NativePaint(const FPaintArgs& Args, const FGeometry& 
 		const FIntPoint H = HoveredCell.GetValue();
 		if (SelectionAnchor.IsSet())
 		{
-			// 미리보기 사각형. 기존 사각형과 겹치면 빨강.
+			// 미리보기 사각형. 제거면 EraseColor, 추가가 기존 칸과 겹치면 빨강.
 			const FIntPoint A = SelectionAnchor.GetValue();
 			const FIntRect Preview(A.ComponentMin(H), A.ComponentMax(H) + FIntPoint(1, 1));
-			DrawRect(Preview, OverlapsSelectedRects(Preview) ? FLinearColor(1.f, 0.f, 0.f, PreviewColor.A) : PreviewColor);
+			if (bEraseSelection)
+			{
+				DrawRect(Preview, EraseColor);
+			}
+			else
+			{
+				DrawRect(Preview, OverlapsSelectedCells(Preview) ? FLinearColor(1.f, 0.f, 0.f, PreviewColor.A) : PreviewColor);
+			}
 		}
 		else
 		{
@@ -213,7 +233,7 @@ int32 UBuildingGridWidget::NativePaint(const FPaintArgs& Args, const FGeometry& 
 	}
 
 	// 외곽선. 변은 Vertex에서 Axis 방향으로 한 칸.
-	for (const FBuildingGridEdge& Edge : GetOutlineEdges())
+	for (const FBuildingGridEdge& Edge : ABuildingGrid::GetOutlineEdges(SelectedCells, Size))
 	{
 		const FIntPoint End = Edge.Vertex + (Edge.Axis == 0 ? FIntPoint(1, 0) : FIntPoint(0, 1));
 		Points[0] = FVector2D(Cell * Edge.Vertex.X, Cell * Edge.Vertex.Y);
@@ -224,55 +244,6 @@ int32 UBuildingGridWidget::NativePaint(const FPaintArgs& Args, const FGeometry& 
 	return LayerId + 3;
 }
 
-TArray<FBuildingGridEdge> UBuildingGridWidget::GetOutlineEdges() const
-{
-	TArray<FBuildingGridEdge> Result;
-	const ABuildingGrid* GridActor = Grid.Get();
-	if (!GridActor)
-	{
-		return Result;
-	}
-
-	const FIntPoint Size = GridActor->GridSize;
-	auto AddEdge = [&Result](int32 X, int32 Y, int32 Axis, bool bFlip)
-	{
-		FBuildingGridEdge& Edge = Result.AddDefaulted_GetRef();
-		Edge.Vertex = FIntPoint(X, Y);
-		Edge.Axis = Axis;
-		Edge.bFlip = bFlip;
-	};
-
-	// 외곽선: 양쪽 칸 중 하나만 선택된 변. 변 정의는 ABuildingGrid와 같음(Vertex = 변의 시작 꼭짓점). 격자 밖 칸은 미선택.
-	// 뒤집지 않은 메시의 앞은 로컬 -Y(AAsteriaPlayer::ShouldFlip). 앞쪽 칸이 선택 영역 밖이면 뒤집어 안쪽을 향하게 한다.
-	// 가로 변(Axis 0): 칸 (X, Y-1)과 (X, Y) 사이. 앞(-Y)은 (X, Y-1) 쪽.
-	for (int32 Y = 0; Y <= Size.Y; ++Y)
-	{
-		for (int32 X = 0; X < Size.X; ++X)
-		{
-			const bool bFront = IsCellSelected(FIntPoint(X, Y - 1));
-			if (bFront != IsCellSelected(FIntPoint(X, Y)))
-			{
-				AddEdge(X, Y, 0, !bFront);
-			}
-		}
-	}
-
-	// 세로 변(Axis 1): 칸 (X-1, Y)와 (X, Y) 사이. yaw 90이라 앞은 +X, 칸 (X, Y) 쪽.
-	for (int32 X = 0; X <= Size.X; ++X)
-	{
-		for (int32 Y = 0; Y < Size.Y; ++Y)
-		{
-			const bool bFront = IsCellSelected(FIntPoint(X, Y));
-			if (IsCellSelected(FIntPoint(X - 1, Y)) != bFront)
-			{
-				AddEdge(X, Y, 1, !bFront);
-			}
-		}
-	}
-
-	return Result;
-}
-
 void UBuildingGridWidget::BuildOutlineWalls(UStaticMesh* Mesh)
 {
 	ABuildingGrid* GridActor = Grid.Get();
@@ -281,16 +252,5 @@ void UBuildingGridWidget::BuildOutlineWalls(UStaticMesh* Mesh)
 		return;
 	}
 
-	// 외곽선이 아닌 변은 넘기지 않으므로 기존 메시가 그대로 남는다. 로컬 호출만.
-	TArray<FBuildingGridEdge> OutlineEdges = GetOutlineEdges();
-	if (OutlineEdges.IsEmpty())
-	{
-		return;
-	}
-
-	for (FBuildingGridEdge& Edge : OutlineEdges)
-	{
-		Edge.Mesh = Mesh;
-	}
-	GridActor->SetEdgeMeshes(OutlineEdges);
+	GridActor->ApplyFloorCells(SelectedCells, Mesh);
 }
