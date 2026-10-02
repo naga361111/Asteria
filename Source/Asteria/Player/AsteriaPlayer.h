@@ -15,6 +15,7 @@ struct FInputActionValue;
 class ABuildingGrid;
 class UStaticMesh;
 class UMaterialInterface;
+class UTabMenuWidget;
 struct FBuildingGridEdge;
 
 UCLASS()
@@ -79,6 +80,21 @@ protected:
 
 	// bPlaceFlipped를 뒤집는다.
 	void FlipPlacement(const FInputActionValue& Value);
+
+	// 탭 메뉴 토글 입력 액션. BP_Player 기본값에서 지정.
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> TabMenuAction;
+
+	// 띄울 WBP 클래스. BP_Player 기본값에서 지정.
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UTabMenuWidget> TabMenuClass;
+
+	// 생성된 위젯. 최초 토글 때 1회 생성 후 재사용. UPROPERTY는 GC 보호용.
+	UPROPERTY(Transient)
+	TObjectPtr<UTabMenuWidget> TabMenu;
+
+	// 탭 메뉴를 열거나 닫고 커서 모드를 맞춘다. SetupPlayerInputComponent()가 바인딩.
+	void ToggleTabMenu(const FInputActionValue& Value);
 
 	// 잡은 메시를 설치될 변 위치에 보여 주는 미리보기. 월드 트랜스폼을 직접 지정한다.
 	UPROPERTY(EditDefaultsOnly, Category = "Placement")

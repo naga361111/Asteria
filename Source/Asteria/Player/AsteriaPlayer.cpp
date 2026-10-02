@@ -12,6 +12,7 @@
 #include "Interaction/Interactable.h"
 #include "GameState/AsteriaGameState.h"
 #include "GameState/Components/CounterService.h"
+#include "UI/TabMenu/TabMenuWidget.h"
 
 void AAsteriaPlayer::Server_AcceptQuestAssignment_Implementation(int32 AssignmentId)
 {
@@ -296,6 +297,38 @@ void AAsteriaPlayer::FlipPlacement(const FInputActionValue& Value)
 	bPlaceFlipped = !bPlaceFlipped;
 }
 
+void AAsteriaPlayer::ToggleTabMenu(const FInputActionValue& Value)
+{
+	if (!IsLocallyControlled()) return;
+
+	APlayerController* PC = GetController<APlayerController>();
+	if (PC == nullptr) return;
+
+	if (TabMenu == nullptr)
+	{
+		if (!TabMenuClass)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("AsteriaPlayer: no TabMenuClass. Tab menu not created."));
+			return;
+		}
+
+		TabMenu = CreateWidget<UTabMenuWidget>(PC, TabMenuClass);
+		if (TabMenu == nullptr) return;
+	}
+
+	// 커서 상태(bUIInputMode)는 상호작용과 공유한다. 상호작용 범위를 벗어나면 열린 채 커서가 꺼질 수 있다.
+	if (TabMenu->IsInViewport())
+	{
+		TabMenu->RemoveFromParent();
+		SetUIInputMode(false);
+	}
+	else
+	{
+		TabMenu->AddToViewport();
+		SetUIInputMode(true);
+	}
+}
+
 // Called to bind functionality to input
 void AAsteriaPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -309,5 +342,6 @@ void AAsteriaPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		EIC->BindAction(SelectAction, ETriggerEvent::Triggered, this, &AAsteriaPlayer::SelectMesh);
 		EIC->BindAction(PlaceAction, ETriggerEvent::Started, this, &AAsteriaPlayer::Place);
 		EIC->BindAction(FlipAction, ETriggerEvent::Started, this, &AAsteriaPlayer::FlipPlacement);
+		EIC->BindAction(TabMenuAction, ETriggerEvent::Started, this, &AAsteriaPlayer::ToggleTabMenu);
 	}
 }
