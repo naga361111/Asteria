@@ -179,9 +179,9 @@ void AAsteriaPlayer::Tick(float DeltaTime)
 	// 시선 광선은 로컬 화면 기준이라 로컬 조종 중일 때만.
 	if (!IsLocallyControlled()) return;
 
-	// 격자·광선·변 중 하나라도 없으면 null로 미리보기를 숨긴다.
+	// UI 커서 모드이거나 격자·광선·변 중 하나라도 없으면 null로 미리보기를 숨긴다.
 	FRay Ray;
-	const FBuildingGridEdge* Edge = Grid.IsValid() && GetViewRay(Ray) ? Grid->FindNearestEdge(Ray) : nullptr;
+	const FBuildingGridEdge* Edge = !bUIInputMode && Grid.IsValid() && GetViewRay(Ray) ? Grid->FindNearestEdge(Ray) : nullptr;
 	UpdatePreview(Edge, Ray.Origin);
 	if (Edge == nullptr) return;
 
@@ -289,6 +289,9 @@ UStaticMesh* AAsteriaPlayer::GetSelectedMesh() const
 
 void AAsteriaPlayer::Place(const FInputActionValue& Value)
 {
+	// UI 커서 모드에서는 UI가 처리하지 않은 클릭도 여기로 오므로 설치하지 않는다.
+	if (bUIInputMode) return;
+
 	UStaticMesh* SelectedMesh = GetSelectedMesh();
 	if (!Grid.IsValid() || SelectedMesh == nullptr) return;
 
