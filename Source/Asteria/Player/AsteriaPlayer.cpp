@@ -271,7 +271,7 @@ void AAsteriaPlayer::Interact(const FInputActionValue& Value)
 
 void AAsteriaPlayer::SelectMesh(const FInputActionValue& Value)
 {
-	const int32 Num = EdgeMeshData ? EdgeMeshData->EdgeMeshes.Num() : 0;
+	const int32 Num = EdgeMeshData ? EdgeMeshData->OutlineMeshes.Num() + EdgeMeshData->InteriorMeshes.Num() : 0;
 	if (Num == 0) return;
 
 	const float Axis = Value.Get<float>();
@@ -283,8 +283,12 @@ void AAsteriaPlayer::SelectMesh(const FInputActionValue& Value)
 
 UStaticMesh* AAsteriaPlayer::GetSelectedMesh() const
 {
-	if (EdgeMeshData == nullptr || !EdgeMeshData->EdgeMeshes.IsValidIndex(SelectedMeshIndex)) return nullptr;
-	return EdgeMeshData->EdgeMeshes[SelectedMeshIndex];
+	if (EdgeMeshData == nullptr) return nullptr;
+	const int32 OutlineNum = EdgeMeshData->OutlineMeshes.Num();
+	if (SelectedMeshIndex < OutlineNum) return EdgeMeshData->OutlineMeshes[SelectedMeshIndex].Mesh;
+	const int32 InteriorIndex = SelectedMeshIndex - OutlineNum;
+	if (!EdgeMeshData->InteriorMeshes.IsValidIndex(InteriorIndex)) return nullptr;
+	return EdgeMeshData->InteriorMeshes[InteriorIndex].Mesh;
 }
 
 void AAsteriaPlayer::Place(const FInputActionValue& Value)

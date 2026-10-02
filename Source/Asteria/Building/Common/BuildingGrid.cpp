@@ -108,8 +108,13 @@ const FBuildingGridEdge* ABuildingGrid::FindNearestEdge(const FRay& Ray) const
 
 	// 만난 점을 액터 기준 칸 좌표로.
 	const FVector Local = GetActorTransform().InverseTransformPosition(Ray.PointAt(T));
-	const double U = Local.X / CellSize;
-	const double V = Local.Y / CellSize;
+	return FindNearestEdgeAt(FVector2D(Local.X / CellSize, Local.Y / CellSize));
+}
+
+const FBuildingGridEdge* ABuildingGrid::FindNearestEdgeAt(const FVector2D& GridPos) const
+{
+	const double U = GridPos.X;
+	const double V = GridPos.Y;
 
 	// ponytail: CalculateEdges()와 같은 선형 탐색, 변이 수백 개를 넘으면 TMap 키 조회로.
 	auto FindEdge = [this](const FIntPoint& Vertex, int32 Axis)
@@ -171,83 +176,124 @@ FTransform ABuildingGrid::GetEdgeMeshTransform(const FBuildingGridEdge& Edge, bo
 	return Result;
 }
 
-TArray<FBuildingGridEdge> ABuildingGrid::GetOutlineEdges(const TSet<FIntPoint>& Cells, const FIntPoint& InGridSize)
+TSet<FIntPoint> ABuildingGrid::GetFloorCells(const TArray<FBuildingGridEdge>& WallEdges, const FIntPoint& InGridSize)
 {
-	TArray<FBuildingGridEdge> Result;
-	auto AddEdge = [&Result](int32 X, int32 Y, int32 Axis, bool bFlip)
+	// ponytail: 벽으로 둘러싸인 빈 공간(안뜰)도 바닥으로 판정, 구분이 필요하면 바닥 칸을 따로 지정.
+	TSet<FIntVector> Walls;
+	for (const FBuildingGridEdge& Edge : WallEdges)
 	{
-		FBuildingGridEdge& Edge = Result.AddDefaulted_GetRef();
-		Edge.Vertex = FIntPoint(X, Y);
-		Edge.Axis = Axis;
-		Edge.bFlip = bFlip;
+		Walls.Add(FIntVector(Edge.Vertex.X, Edge.Vertex.Y, Edge.Axis));
+	}
+
+	// 격자 밖 한 칸까지 포함한 범위에서 (-1, -1)부터 벽을 건너지 않고 닿는 칸을 찾는다.
+	auto InRange = [&InGridSize](const FIntPoint& Cell)
+	{
+		return Cell.X >= -1 && Cell.X <= InGridSize.X && Cell.Y >= -1 && Cell.Y <= InGridSize.Y;
 	};
 
-	// 외곽선: 양쪽 칸 중 하나만 Cells에 있는 변. Vertex = 변의 시작 꼭짓점. 격자 밖 칸은 Cells 밖.
-	// 뒤집지 않은 메시의 앞은 로컬 -Y(AAsteriaPlayer::ShouldFlip). 앞쪽 칸이 Cells 밖이면 뒤집어 안쪽을 향하게 한다.
-	// 가로 변(Axis 0): 칸 (X, Y-1)과 (X, Y) 사이. 앞(-Y)은 (X, Y-1) 쪽.
-	for (int32 Y = 0; Y <= InGridSize.Y; ++Y)
+	TSet<FIntPoint> Visited;
+	TArray<FIntPoint> Queue;
+	Visited.Add(FIntPoint(-1, -1));
+	Queue.Add(FIntPoint(-1, -1));
+	for (int32 Head = 0; Head < Queue.Num(); ++Head)
+	{
+		const FIntPoint Cell = Queue[Head];
+		auto TryVisit = [&](const FIntPoint& Next, const FIntVector& Wall)
+		{
+			if (InRange(Next) && !Walls.Contains(Wall) && !Visited.Contains(Next))
+			{
+				Visited.Add(Next);
+				Queue.Add(Next);
+			}
+		};
+
+		// 칸 (X, Y)↔(X+1, Y) 사이 = Axis 1, Vertex (X+1, Y). 칸 (X, Y)↔(X, Y+1) 사이 = Axis 0, Vertex (X, Y+1).
+		TryVisit(FIntPoint(Cell.X + 1, Cell.Y), FIntVector(Cell.X + 1, Cell.Y, 1));
+		TryVisit(FIntPoint(Cell.X - 1, Cell.Y), FIntVector(Cell.X, Cell.Y, 1));
+		TryVisit(FIntPoint(Cell.X, Cell.Y + 1), FIntVector(Cell.X, Cell.Y + 1, 0));
+		TryVisit(FIntPoint(Cell.X, Cell.Y - 1), FIntVector(Cell.X, Cell.Y, 0));
+	}
+
+	TSet<FIntPoint> Result;
+	for (int32 Y = 0; Y < InGridSize.Y; ++Y)
 	{
 		for (int32 X = 0; X < InGridSize.X; ++X)
 		{
-			const bool bFront = Cells.Contains(FIntPoint(X, Y - 1));
-			if (bFront != Cells.Contains(FIntPoint(X, Y)))
+			if (!Visited.Contains(FIntPoint(X, Y)))
 			{
-				AddEdge(X, Y, 0, !bFront);
+				Result.Add(FIntPoint(X, Y));
 			}
 		}
 	}
-
-	// 세로 변(Axis 1): 칸 (X-1, Y)와 (X, Y) 사이. yaw 90이라 앞은 +X, 칸 (X, Y) 쪽.
-	for (int32 X = 0; X <= InGridSize.X; ++X)
-	{
-		for (int32 Y = 0; Y < InGridSize.Y; ++Y)
-		{
-			const bool bFront = Cells.Contains(FIntPoint(X, Y));
-			if (Cells.Contains(FIntPoint(X - 1, Y)) != bFront)
-			{
-				AddEdge(X, Y, 1, !bFront);
-			}
-		}
-	}
-
 	return Result;
 }
 
-void ABuildingGrid::ApplyFloorCells(const TSet<FIntPoint>& NewCells, UStaticMesh* WallMesh)
+EBuildingEdgeKind ABuildingGrid::GetEdgeKind(const FBuildingGridEdge& Edge, const TSet<FIntPoint>& InFloorCells, bool& bOutInwardFlip)
 {
-	if (WallMesh == nullptr)
-	{
-		return;
-	}
+	// 뒤집지 않은 메시의 앞은 로컬 -Y(AAsteriaPlayer::ShouldFlip). 앞쪽 칸이 바닥 밖이면 뒤집어 안쪽을 향하게 한다.
+	// 가로 변(Axis 0): 칸 (X, Y-1)과 (X, Y) 사이. 앞(-Y)은 (X, Y-1) 쪽.
+	// 세로 변(Axis 1): 칸 (X-1, Y)와 (X, Y) 사이. yaw 90이라 앞은 +X, 칸 (X, Y) 쪽.
+	const FIntPoint& V = Edge.Vertex;
+	const FIntPoint Front = Edge.Axis == 0 ? FIntPoint(V.X, V.Y - 1) : FIntPoint(V.X, V.Y);
+	const FIntPoint Back = Edge.Axis == 0 ? FIntPoint(V.X, V.Y) : FIntPoint(V.X - 1, V.Y);
 
-	// 이전·새 외곽선 어디에도 없는 변은 넘기지 않으므로 기존 메시가 그대로 남는다. 로컬 호출만.
-	const TArray<FBuildingGridEdge> OldOutline = GetOutlineEdges(FloorCells, GridSize);
-	TArray<FBuildingGridEdge> NewEdges = GetOutlineEdges(NewCells, GridSize);
+	const bool bFront = InFloorCells.Contains(Front);
+	const bool bBack = InFloorCells.Contains(Back);
+	bOutInwardFlip = !bFront;
+	if (bFront && bBack)
+	{
+		return EBuildingEdgeKind::Interior;
+	}
+	return bFront || bBack ? EBuildingEdgeKind::Outline : EBuildingEdgeKind::Open;
+}
+
+bool ABuildingGrid::ApplyWallEdges(const TArray<FBuildingGridEdge>& NewWallEdges)
+{
+	// 검증을 반영 전에 전부 끝낸다. 일부만 반영되는 경우 없음. 로컬 호출만(서버 권위는 추후).
+	const TSet<FIntPoint> NewFloor = GetFloorCells(NewWallEdges, GridSize);
+	TArray<FBuildingGridEdge> NewEdges = NewWallEdges;
 	for (FBuildingGridEdge& Edge : NewEdges)
 	{
-		Edge.Mesh = WallMesh;
+		bool bInward = false;
+		const EBuildingEdgeKind Kind = GetEdgeKind(Edge, NewFloor, bInward);
+		if (Kind == EBuildingEdgeKind::Open || Edge.Mesh == nullptr)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("BuildingGrid: 변 (%d, %d) Axis %d 가 닫히지 않았거나 메시가 없어 벽 반영 취소"),
+				Edge.Vertex.X, Edge.Vertex.Y, Edge.Axis);
+			return false;
+		}
+		if (Kind == EBuildingEdgeKind::Outline)
+		{
+			Edge.bFlip = bInward;
+		}
 	}
 
-	// 이전 외곽선에만 있던 변은 비운다. 뒤에 붙인 원소도 이전 외곽선끼리 키가 겹치지 않으므로 탐색 대상에 섞여도 무방.
-	for (const FBuildingGridEdge& OldEdge : OldOutline)
+	// 이전에 메시가 있었지만 새 벽에서 빠진 변은 비운다.
+	for (const FBuildingGridEdge& OldEdge : Edges)
 	{
+		if (OldEdge.Mesh == nullptr)
+		{
+			continue;
+		}
+
 		// ponytail: CalculateEdges()와 같은 선형 탐색, 변이 수백 개를 넘으면 TMap 키 조회로.
-		const bool bStillOutline = NewEdges.ContainsByPredicate([&OldEdge](const FBuildingGridEdge& Candidate)
+		const bool bStillWall = NewWallEdges.ContainsByPredicate([&OldEdge](const FBuildingGridEdge& Candidate)
 		{
 			return Candidate.Vertex == OldEdge.Vertex && Candidate.Axis == OldEdge.Axis;
 		});
-		if (!bStillOutline)
+		if (!bStillWall)
 		{
 			FBuildingGridEdge& Edge = NewEdges.Add_GetRef(OldEdge);
 			Edge.Mesh = nullptr;
 		}
 	}
 
-	FloorCells = NewCells;
+	FloorCells = NewFloor;
 	if (!NewEdges.IsEmpty())
 	{
 		SetEdgeMeshes(NewEdges);
 	}
+	return true;
 }
 
 void ABuildingGrid::SpawnEdgeMeshes()

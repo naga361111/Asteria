@@ -62,7 +62,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Placement")
 	TObjectPtr<UBuildingEdgeMeshData> EdgeMeshData;
 
-	// 선택된 메시의 EdgeMeshData->EdgeMeshes 인덱스.
+	// 선택된 메시의 EdgeMeshData->OutlineMeshes 뒤에 InteriorMeshes를 이어 붙인 순서의 인덱스.
 	int32 SelectedMeshIndex = 0;
 
 	// EdgeMeshData가 있고 SelectedMeshIndex가 유효하면 그 메시, 아니면 nullptr. UpdatePreview()·Place()가 호출.
