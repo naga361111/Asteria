@@ -171,6 +171,85 @@ FTransform ABuildingGrid::GetEdgeMeshTransform(const FBuildingGridEdge& Edge, bo
 	return Result;
 }
 
+TArray<FBuildingGridEdge> ABuildingGrid::GetOutlineEdges(const TSet<FIntPoint>& Cells, const FIntPoint& InGridSize)
+{
+	TArray<FBuildingGridEdge> Result;
+	auto AddEdge = [&Result](int32 X, int32 Y, int32 Axis, bool bFlip)
+	{
+		FBuildingGridEdge& Edge = Result.AddDefaulted_GetRef();
+		Edge.Vertex = FIntPoint(X, Y);
+		Edge.Axis = Axis;
+		Edge.bFlip = bFlip;
+	};
+
+	// 외곽선: 양쪽 칸 중 하나만 Cells에 있는 변. Vertex = 변의 시작 꼭짓점. 격자 밖 칸은 Cells 밖.
+	// 뒤집지 않은 메시의 앞은 로컬 -Y(AAsteriaPlayer::ShouldFlip). 앞쪽 칸이 Cells 밖이면 뒤집어 안쪽을 향하게 한다.
+	// 가로 변(Axis 0): 칸 (X, Y-1)과 (X, Y) 사이. 앞(-Y)은 (X, Y-1) 쪽.
+	for (int32 Y = 0; Y <= InGridSize.Y; ++Y)
+	{
+		for (int32 X = 0; X < InGridSize.X; ++X)
+		{
+			const bool bFront = Cells.Contains(FIntPoint(X, Y - 1));
+			if (bFront != Cells.Contains(FIntPoint(X, Y)))
+			{
+				AddEdge(X, Y, 0, !bFront);
+			}
+		}
+	}
+
+	// 세로 변(Axis 1): 칸 (X-1, Y)와 (X, Y) 사이. yaw 90이라 앞은 +X, 칸 (X, Y) 쪽.
+	for (int32 X = 0; X <= InGridSize.X; ++X)
+	{
+		for (int32 Y = 0; Y < InGridSize.Y; ++Y)
+		{
+			const bool bFront = Cells.Contains(FIntPoint(X, Y));
+			if (Cells.Contains(FIntPoint(X - 1, Y)) != bFront)
+			{
+				AddEdge(X, Y, 1, !bFront);
+			}
+		}
+	}
+
+	return Result;
+}
+
+void ABuildingGrid::ApplyFloorCells(const TSet<FIntPoint>& NewCells, UStaticMesh* WallMesh)
+{
+	if (WallMesh == nullptr)
+	{
+		return;
+	}
+
+	// 이전·새 외곽선 어디에도 없는 변은 넘기지 않으므로 기존 메시가 그대로 남는다. 로컬 호출만.
+	const TArray<FBuildingGridEdge> OldOutline = GetOutlineEdges(FloorCells, GridSize);
+	TArray<FBuildingGridEdge> NewEdges = GetOutlineEdges(NewCells, GridSize);
+	for (FBuildingGridEdge& Edge : NewEdges)
+	{
+		Edge.Mesh = WallMesh;
+	}
+
+	// 이전 외곽선에만 있던 변은 비운다. 뒤에 붙인 원소도 이전 외곽선끼리 키가 겹치지 않으므로 탐색 대상에 섞여도 무방.
+	for (const FBuildingGridEdge& OldEdge : OldOutline)
+	{
+		// ponytail: CalculateEdges()와 같은 선형 탐색, 변이 수백 개를 넘으면 TMap 키 조회로.
+		const bool bStillOutline = NewEdges.ContainsByPredicate([&OldEdge](const FBuildingGridEdge& Candidate)
+		{
+			return Candidate.Vertex == OldEdge.Vertex && Candidate.Axis == OldEdge.Axis;
+		});
+		if (!bStillOutline)
+		{
+			FBuildingGridEdge& Edge = NewEdges.Add_GetRef(OldEdge);
+			Edge.Mesh = nullptr;
+		}
+	}
+
+	FloorCells = NewCells;
+	if (!NewEdges.IsEmpty())
+	{
+		SetEdgeMeshes(NewEdges);
+	}
+}
+
 void ABuildingGrid::SpawnEdgeMeshes()
 {
 	// 메시 종류마다 인스턴스드 메시 컴포넌트 하나.

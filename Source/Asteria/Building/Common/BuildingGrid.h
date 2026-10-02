@@ -56,6 +56,10 @@ public:
 	UPROPERTY(EditAnywhere, EditFixedSize, Category = "Grid")
 	TArray<FBuildingGridEdge> Edges;
 
+	// 건물 바닥 칸 집합. 외곽선 벽의 기준. ApplyFloorCells()가 설정.
+	UPROPERTY(VisibleAnywhere, Category = "Grid")
+	TSet<FIntPoint> FloorCells;
+
 	virtual void OnConstruction(const FTransform& Transform) override;
 
 	// 광선이 격자 바닥 평면과 만나는 점에서 가장 가까운 변. 평면과 안 만나거나 격자 밖이면 nullptr.
@@ -67,6 +71,12 @@ public:
 
 	// Edge에 메시를 놓을 액터 기준 트랜스폼. bFlip이면 변 Transform에 yaw 180도를 더한다(위치는 그대로).
 	static FTransform GetEdgeMeshTransform(const FBuildingGridEdge& Edge, bool bFlip);
+
+	// Cells의 외곽선 변 목록. 원소의 Vertex·Axis·bFlip(앞면이 Cells 안쪽)만 채우고 Mesh는 null.
+	static TArray<FBuildingGridEdge> GetOutlineEdges(const TSet<FIntPoint>& Cells, const FIntPoint& InGridSize);
+
+	// FloorCells를 NewCells로 바꾸고, 새 외곽선 변에 WallMesh를 안쪽 방향으로, 이전 외곽선에만 있던 변에 null을 넣는다.
+	void ApplyFloorCells(const TSet<FIntPoint>& NewCells, UStaticMesh* WallMesh);
 
 private:
 	void CalculateEdges();
