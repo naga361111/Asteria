@@ -8,7 +8,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "EngineUtils.h"
 #include "InputActionValue.h"
-#include "Building/BuildingGrid.h"
+#include "Building/Common/BuildingGrid.h"
 #include "Interaction/Interactable.h"
 #include "GameState/AsteriaGameState.h"
 #include "GameState/Components/CounterService.h"

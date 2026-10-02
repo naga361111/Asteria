@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Building/BuildingGrid.h"
+#include "Building/Common/BuildingGrid.h"
 
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/LineBatchComponent.h"
