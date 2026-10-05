@@ -1,0 +1,9 @@
+{
+  "autoMemoryDirectory": "C:/Projects/Unreal/Asteria/memory",
+  "enabledMcpjsonServers": [
+    "unreal-mcp"
+  ],
+  "enabledPlugins": {
+    "ponytail@ponytail": true
+  }
+}
